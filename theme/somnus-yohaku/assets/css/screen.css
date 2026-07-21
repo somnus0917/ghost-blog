@@ -22,6 +22,13 @@
   --sans: "LXGW WenKai Web", "LXGW WenKai", "霞鹜文楷", ui-sans-serif, system-ui, sans-serif;
   --serif: "LXGW WenKai Web", "LXGW WenKai", "霞鹜文楷", "Songti SC", STSong, serif;
   --mono: "SFMono-Regular", "Cascadia Mono", Consolas, monospace;
+  /* Quick typography controls: increase these values to enlarge the whole site. */
+  --type-body: 17px;
+  --type-ui: 13px;
+  --type-small: 11px;
+  --type-list-title: 18px;
+  --type-article: 18px;
+  --type-article-mobile: 17px;
   --page: min(1220px, calc(100vw - 96px));
   --article: min(800px, calc(100vw - 48px));
 }
@@ -74,7 +81,7 @@ body {
   color: var(--ink);
   background: var(--paper);
   font-family: var(--sans);
-  font-size: 16px;
+  font-size: var(--type-body);
   line-height: 1.7;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -1454,7 +1461,7 @@ video {
 }
 
 .floating-nav a {
-  font-size: 12px;
+  font-size: var(--type-ui);
   font-weight: 560;
 }
 
@@ -1535,7 +1542,7 @@ video {
 .hero-kicker {
   max-width: 700px;
   margin-top: 18px;
-  font-size: 9px;
+  font-size: var(--type-small);
   letter-spacing: 0.15em;
 }
 
@@ -1615,21 +1622,21 @@ video {
 
 .post-row h2 {
   font-family: var(--sans);
-  font-size: 17px;
+  font-size: var(--type-list-title);
   font-weight: 570;
   letter-spacing: -0.02em;
 }
 
 .post-row-kind {
   margin-top: 7px;
-  font-size: 9px;
+  font-size: var(--type-small);
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
 .post-row time {
   font-family: var(--sans);
-  font-size: 10px;
+  font-size: var(--type-small);
   font-style: normal;
 }
 
@@ -1673,7 +1680,7 @@ video {
 .stream-item h2 {
   margin: 0;
   font-family: var(--sans);
-  font-size: 15px;
+  font-size: calc(var(--type-list-title) - 2px);
   font-weight: 580;
   letter-spacing: -0.015em;
 }
@@ -1683,7 +1690,7 @@ video {
   overflow: hidden;
   margin: 8px 0 0;
   color: var(--ink-soft);
-  font-size: 11px;
+  font-size: var(--type-ui);
   line-height: 1.7;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -1711,7 +1718,7 @@ video {
 .season-copy > p:last-child {
   margin: 18px 0 0;
   color: var(--ink-soft);
-  font-size: 12px;
+  font-size: var(--type-ui);
 }
 
 .season-track {
@@ -1767,7 +1774,7 @@ video {
   display: -webkit-box;
   overflow: hidden;
   margin-top: 7px;
-  font-size: 11px;
+  font-size: var(--type-ui);
   font-weight: 560;
   line-height: 1.45;
   -webkit-box-orient: vertical;
@@ -1832,7 +1839,7 @@ video {
   padding-left: 10px;
   border-left: 1px solid var(--line);
   color: var(--ink-faint);
-  font-size: 10px;
+  font-size: var(--type-small);
   line-height: 1.45;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -1856,7 +1863,7 @@ video {
 
 .gh-content {
   font-family: var(--sans);
-  font-size: 15.5px;
+  font-size: var(--type-article);
   line-height: 1.88;
 }
 
@@ -1988,7 +1995,7 @@ video {
 
   .hero-kicker {
     max-width: 320px;
-    font-size: 7px;
+    font-size: 9px;
     line-height: 1.65;
   }
 
@@ -2024,7 +2031,7 @@ video {
   }
 
   .post-row h2 {
-    font-size: 14px;
+    font-size: calc(var(--type-list-title) - 1px);
   }
 
   .home-streams {
@@ -2059,7 +2066,7 @@ video {
   }
 
   .gh-content {
-    font-size: 15px;
+    font-size: var(--type-article-mobile);
     line-height: 1.86;
   }
 }

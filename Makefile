@@ -17,6 +17,7 @@ dev:
 	mkdir -p $(LOCAL_THEME)
 	rsync -a --delete $(THEME)/ $(LOCAL_THEME)/
 	docker compose --env-file .env up -d
+	docker compose restart ghost
 	@echo "Local Ghost: http://127.0.0.1:2368"
 
 logs:

@@ -21,6 +21,21 @@ The site self-hosts the official LXGW WenKai Regular web font at
 `assets/fonts/LXGWWenKai-Regular.woff2`. `font-display: swap` keeps text visible while
 the font downloads. The original SIL Open Font License is included beside the font.
 
+The quickest way to change the site's font size is to edit these variables near the
+top of `assets/css/screen.css`:
+
+```css
+--type-body: 17px;            /* global body and interface baseline */
+--type-ui: 13px;              /* navigation, summaries, secondary text */
+--type-small: 11px;           /* dates, labels, metadata */
+--type-list-title: 18px;      /* homepage and archive article titles */
+--type-article: 18px;         /* desktop article body */
+--type-article-mobile: 17px;  /* mobile article body */
+```
+
+For a visibly larger first test, try `18 / 14 / 12 / 20 / 19 / 18px` in that order.
+Run `make dev` after saving, then refresh the local page.
+
 ## Local loop
 
 From this repository directory:
