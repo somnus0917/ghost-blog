@@ -16,9 +16,11 @@ make dev
 make check
 ```
 
-`make dev` starts a local Ghost instance at `http://127.0.0.1:2368` and syncs the
-theme into its content directory. Commit and push visual changes to `main` after
-`make check` passes.
+Start Docker Desktop first. `make dev` creates the required local Docker network,
+starts a local Ghost instance at `http://127.0.0.1:2369`, and syncs the theme into
+its content directory. On the first run, finish setup at
+`http://127.0.0.1:2369/ghost/` and activate `somnus-yohaku`. Commit and push visual
+changes to `main` after `make check` passes.
 
 The theme self-hosts LXGW WenKai in WOFF2 format. The upstream OFL license is
 included in `theme/somnus-yohaku/assets/fonts/OFL.txt`.

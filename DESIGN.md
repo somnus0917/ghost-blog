@@ -45,9 +45,11 @@ cp .env.example .env
 make dev
 ```
 
-Open `http://127.0.0.1:2368`, complete the local Ghost setup once, and activate
-`somnus-yohaku`. Theme edits are copied into the local Ghost content directory each
-time `make dev` runs. Before pushing:
+Start Docker Desktop before running the commands. Open `http://127.0.0.1:2369/ghost/`,
+complete the local Ghost setup once, then activate `somnus-yohaku` under the theme
+settings. Port `2369` is intentionally used so an SSH tunnel on the production port
+`2368` can stay open. Theme edits are copied into the local Ghost content directory
+and Ghost is recreated safely each time `make dev` runs. Before pushing:
 
 ```bash
 make check
