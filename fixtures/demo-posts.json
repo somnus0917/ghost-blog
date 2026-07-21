@@ -1,0 +1,93 @@
+[
+  {
+    "title": "把博客搬回自己手里",
+    "slug": "bring-the-blog-home",
+    "custom_excerpt": "从托管平台迁回自建 Ghost：不是为了掌控一切，而是为了保留选择的余地。",
+    "published_at": "2026-07-20T13:20:00.000Z",
+    "featured": true,
+    "tags": [
+      {"name": "自建服务", "slug": "self-hosting"},
+      {"name": "#文章", "slug": "hash-posts"}
+    ],
+    "html": "<p>我一直觉得，个人网站最迷人的地方不是它有多少访问量，而是它允许一个人用自己的节奏说话。页面可以安静，更新可以缓慢，旧文章也不必为了迎合算法而被重新包装。</p><h2>为什么选择自建</h2><p>自建不是把每一个零件都重新发明一遍。它只是把域名、数据和发布流程重新放回自己能够理解的位置。Ghost 负责写作与内容管理，MySQL 保存数据，Caddy 处理 HTTPS，腾讯云提供一台持续在线的机器。</p><blockquote><p>所谓拥有，不是永远不出故障，而是知道故障发生时应该去哪里寻找答案。</p></blockquote><h2>现在的结构</h2><ul><li>博客正文由 Ghost 管理；</li><li>主题和部署配置保存在 Git 仓库；</li><li>每次推送由 GitHub Actions 检查并发布主题；</li><li>数据库与上传文件按天备份。</li></ul><pre><code class=\"language-bash\">make check\ngit push origin main\n</code></pre><h2>迁移之后</h2><p>真正的变化并不显眼。写作界面依旧是一张空白纸，读者依旧通过同一个域名抵达。变化藏在背后：我可以慢慢修改字体、间距和交互，也可以在未来把整座站点搬去另一台机器。</p><p>把博客搬回自己手里，不是一次技术宣言。它更像整理书桌——腾出一块属于自己的地方，然后继续写。</p>"
+  },
+  {
+    "title": "霞鹭文楷与中文网页的呼吸感",
+    "slug": "lxgw-wenkai-on-the-web",
+    "custom_excerpt": "字体不是最后贴上去的装饰；它决定了中文页面如何呼吸、停顿与展开。",
+    "published_at": "2026-07-18T09:10:00.000Z",
+    "tags": [
+      {"name": "字体设计", "slug": "typography"},
+      {"name": "#文章", "slug": "hash-posts"},
+      {"name": "#随笔", "slug": "hash-essays"}
+    ],
+    "html": "<p>换上霞鹭文楷之后，页面最先改变的不是风格，而是语气。相同的一段中文不再像产品说明书，更接近纸面上的随手记录。</p><h2>先让正文站稳</h2><p>中文正文的舒适度常常由几个朴素的数字决定：字号、行高、段落间距和每行字数。它们没有一个能够单独解决问题，却会一起塑造阅读的节奏。</p><pre><code class=\"language-css\">:root {\n  --font-body: \"LXGW WenKai\", serif;\n  --text-base: 19px;\n  --line-height: 1.9;\n}\n</code></pre><h2>文楷并不意味着复古</h2><p>我不想把网站做成仿纸张，也不想添加泛黄纹理。文楷可以和清晰的网格、克制的颜色以及现代界面共存。关键是保留足够的留白，让笔画的细节不必互相争抢。</p><blockquote><p>字体负责声音，版式负责沉默。阅读发生在两者之间。</p></blockquote><p>标题仍然可以坚定，元信息仍然可以小而清晰。正文则稍微松开一点，允许目光在句子之间停留。对个人博客而言，这种不急于抵达结论的感觉尤其珍贵。</p>"
+  },
+  {
+    "title": "为一个个人网站设计余白",
+    "slug": "designing-yohaku",
+    "custom_excerpt": "从信息密度、视觉层级到微小动效，记录 somnus-yohaku 主题背后的取舍。",
+    "published_at": "2026-07-15T15:40:00.000Z",
+    "tags": [
+      {"name": "界面设计", "slug": "interface-design"},
+      {"name": "#文章", "slug": "hash-posts"},
+      {"name": "#随笔", "slug": "hash-essays"}
+    ],
+    "html": "<p>设计个人网站时，最难的不是决定放什么，而是决定什么可以不放。导航不需要占据整行，卡片不必都有边框，首页也无需立刻解释全部身份。</p><h2>余白不是空白</h2><p>余白是一种关系：标题与正文之间的距离、两篇文章之间的停顿、页面边缘留给视线的缓冲。它让内容拥有边界，也让不同层级不必依靠更粗、更大、更亮来彼此区分。</p><h3>三个约束</h3><ol><li><strong>颜色克制：</strong>一个主色负责强调，其余交给黑、白和灰。</li><li><strong>层级有限：</strong>每个页面最多出现三种明确的文字层级。</li><li><strong>动效有因：</strong>只有当状态发生变化时，元素才需要移动。</li></ol><h2>首页是一张索引</h2><p>它不应该替文章完成表达。首页只需要留下几条线索：最近在写什么、平时记录什么、这个人如何与世界保持联系。读者愿意继续时，再把空间交给具体文章。</p><p>最后留下来的设计通常都很安静。它们不会在第一次打开时大声宣布自己，却能让人在读完几页后感到顺手。</p>"
+  },
+  {
+    "title": "Small systems, slowly tended",
+    "slug": "small-systems-slowly-tended",
+    "custom_excerpt": "A personal site is less a finished product than a small system you can keep tending over time.",
+    "published_at": "2026-07-12T07:30:00.000Z",
+    "tags": [
+      {"name": "English", "slug": "english"},
+      {"name": "#文章", "slug": "hash-posts"}
+    ],
+    "html": "<p>I like tools that become quieter as I understand them. A good personal website belongs to that family: it begins as a collection of choices and gradually turns into a place where writing feels natural.</p><h2>A site is a practice</h2><p>The domain, server and theme matter, but none of them is the point on its own. Their job is to make a small, dependable path between an unfinished thought and a published page.</p><blockquote><p>Build only enough machinery to protect the habit you care about.</p></blockquote><h2>What I want to keep</h2><ul><li>Plain URLs that will still make sense years from now.</li><li>Files and backups I can move without asking permission.</li><li>A visual language that can change without erasing the archive.</li><li>Enough friction to edit carefully, but not enough to avoid publishing.</li></ul><p>There will always be another component to tune. At some point, though, maintenance has to make room for attention. The best version of the system is the one that lets me close the terminal and return to the sentence.</p>"
+  },
+  {
+    "title": "一份不追求效率的写作流程",
+    "slug": "a-slower-writing-workflow",
+    "custom_excerpt": "从随手记下一句话，到整理、校对与发布：让想法有机会慢慢长成文章。",
+    "published_at": "2026-07-08T11:00:00.000Z",
+    "tags": [
+      {"name": "写作", "slug": "writing"},
+      {"name": "#文章", "slug": "hash-posts"}
+    ],
+    "html": "<p>我的写作流程并不高效。很多句子会在备忘录里躺很久，标题改过三四次，准备发布时又删掉整段开头。但这种缓慢并非浪费，它让文章从即时反应变成经过选择的记录。</p><h2>捕捉，而不是立刻完成</h2><p>最初只需要记下一句话：一个问题、一处细节，或者某个不愿忘记的瞬间。不要急着补齐背景，也不必给它安排结论。</p><h2>整理时寻找结构</h2><p>隔几天重新打开笔记，通常能看见两三条真正重要的线索。把它们排成顺序，再补上读者需要的上下文。此时我会检查：</p><ul><li>文章是否只有一个中心；</li><li>每个小标题是否推动了表达；</li><li>抽象判断之后是否有具体细节；</li><li>结尾是否只是重复开头。</li></ul><h2>发布不是定稿</h2><p>网页允许修订。知道这一点之后，发布就不再像一次终审，更像给当前版本标记日期。未来的自己可以补充链接、更正事实，也可以保留当时略显笨拙的语气。</p>"
+  },
+  {
+    "title": "Ghost 主题调试手记：从 Source 到自己的主题",
+    "slug": "ghost-theme-debug-note",
+    "custom_excerpt": "主题文件已经挂载，页面却还是默认样式时，应当检查什么？",
+    "published_at": "2026-07-21T08:45:00.000Z",
+    "tags": [
+      {"name": "Ghost", "slug": "ghost"},
+      {"name": "#笔记", "slug": "hash-notes"}
+    ],
+    "html": "<p>今天遇到一个很典型的问题：自定义主题目录已经出现在容器里，首页却仍然显示紫色渐变的 Source 默认页面。</p><h2>文件存在不等于主题已激活</h2><p>Ghost 会把当前主题名称保存在数据库设置中。挂载目录只让 Ghost 能够发现主题，并不会自动改变 <code>active_theme</code>。</p><pre><code class=\"language-bash\">docker exec somnus-ghost ls /var/lib/ghost/content/themes\n</code></pre><p>确认目录存在后，还要在后台激活主题，或者通过 Admin API 调用主题激活接口。</p><h2>再检查站点 URL</h2><p>本地端口如果从 2368 改成 2369，<code>GHOST_URL</code> 也必须同步。否则登录请求会因为 Origin 不一致而被拒绝。最终，浏览器地址、端口映射和 Ghost URL 三者应当完全相同。</p>"
+  },
+  {
+    "title": "一次安静的发布：主题 CI/CD 备忘",
+    "slug": "quiet-theme-deployment",
+    "custom_excerpt": "把主题检查、打包和部署交给工作流，让发布只剩下一次清晰的推送。",
+    "published_at": "2026-07-19T04:25:00.000Z",
+    "tags": [
+      {"name": "自动化", "slug": "automation"},
+      {"name": "#笔记", "slug": "hash-notes"}
+    ],
+    "html": "<p>主题发布流程现在只有三步：修改、检查、推送。GitHub Actions 会验证主题结构，构建 zip，再通过 Ghost Admin API 部署。</p><pre><code class=\"language-bash\">make check\ngit add theme/\ngit commit -m \"Refine article typography\"\ngit push\n</code></pre><h2>密钥放在哪里</h2><p>Admin API Key 只保存在 GitHub Actions Secrets 中，不进入仓库，也不写进工作流日志。本地开发不依赖生产密钥，两套环境彼此独立。</p><h2>发布前的小清单</h2><ul><li>检查桌面和移动端文章页；</li><li>确认深色模式下的文字对比度；</li><li>运行主题检查；</li><li>查看提交中是否意外包含 <code>.env</code>。</li></ul>"
+  },
+  {
+    "title": "七月二十一日，重启之后",
+    "slug": "july-21-after-restart",
+    "custom_excerpt": "Docker 重启、端口冲突，以及终于出现的那一页。",
+    "published_at": "2026-07-21T14:10:00.000Z",
+    "tags": [
+      {"name": "日常", "slug": "daily-life"},
+      {"name": "#日记", "slug": "hash-diary"}
+    ],
+    "html": "<p>下午的大部分时间都花在等待容器启动。先是 Docker 没有运行，接着 2368 端口已经被隧道占用，最后又遇到站点 URL 与浏览器 Origin 不一致。</p><p>这些问题单独看都很小，叠在一起却足以让一个本该简单的预览变得漫长。好在日志诚实：它总会留下某个可以继续追问的词。</p><h2>今天留下的东西</h2><p>一个能在本地启动的 Ghost，一套真正挂载进去的主题，还有几处比上午更舒服的字号。页面终于出现时，没有想象中的庆祝，只是顺手又调整了一个间距。</p><p>窗外已经暗下来。服务器继续运行，而我准备去倒一杯水。</p>"
+  }
+]

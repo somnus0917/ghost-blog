@@ -13,6 +13,7 @@ The standalone project directory is this repository. From its root, run:
 ```bash
 cp .env.example .env
 make dev
+make demo
 make check
 ```
 
@@ -21,6 +22,12 @@ starts a local Ghost instance at `http://127.0.0.1:2369`, and syncs the theme in
 its content directory. On the first run, finish setup at
 `http://127.0.0.1:2369/ghost/` and activate `somnus-yohaku`. Commit and push visual
 changes to `main` after `make check` passes.
+
+`make demo` idempotently adds sample articles, notes, and diary entries to the
+local Ghost database and activates `somnus-yohaku`. It never writes a local Admin
+API key to disk or command output. Run it again with
+`python3 scripts/seed_demo_content.py --update-existing` to restore edited demo
+posts to the repository versions.
 
 The theme self-hosts LXGW WenKai in WOFF2 format. The upstream OFL license is
 included in `theme/somnus-yohaku/assets/fonts/OFL.txt`.

@@ -23,12 +23,12 @@
   --serif: "LXGW WenKai Web", "LXGW WenKai", "霞鹜文楷", "Songti SC", STSong, serif;
   --mono: "SFMono-Regular", "Cascadia Mono", Consolas, monospace;
   /* Quick typography controls: increase these values to enlarge the whole site. */
-  --type-body: 17px;
-  --type-ui: 13px;
-  --type-small: 11px;
-  --type-list-title: 18px;
-  --type-article: 18px;
-  --type-article-mobile: 17px;
+  --type-body: 19px;
+  --type-ui: 15px;
+  --type-small: 13px;
+  --type-list-title: 20px;
+  --type-article: 20px;
+  --type-article-mobile: 19px;
   --page: min(1220px, calc(100vw - 96px));
   --article: min(800px, calc(100vw - 48px));
 }
