@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily backup for Somnus Ghost
+
+[Timer]
+OnCalendar=*-*-* 03:20:00 Asia/Shanghai
+Persistent=true
+RandomizedDelaySec=10m
+Unit=ghost-blog-backup.service
+
+[Install]
+WantedBy=timers.target

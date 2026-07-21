@@ -1,0 +1,25 @@
+{
+  "name": "somnus-yohaku",
+  "description": "A restrained editorial Ghost theme for Somnus",
+  "version": "1.0.0",
+  "author": {
+    "name": "Somnus",
+    "email": "mailmeblog@somnus.wiki"
+  },
+  "engines": {
+    "ghost": ">=6.0.0"
+  },
+  "license": "MIT",
+  "keywords": [
+    "ghost-theme"
+  ],
+  "config": {
+    "posts_per_page": 12,
+    "image_sizes": {
+      "s": { "width": 480 },
+      "m": { "width": 960 },
+      "l": { "width": 1600 }
+    },
+    "card_assets": true
+  }
+}

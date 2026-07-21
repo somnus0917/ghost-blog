@@ -1,0 +1,14 @@
+{{!< default}}
+
+{{#post}}
+<article class="article-shell page-shell {{post_class}}">
+    <header class="article-header">
+        <p class="article-eyebrow">PAGE</p>
+        <h1>{{title}}</h1>
+        {{#if custom_excerpt}}<p class="page-excerpt">{{custom_excerpt}}</p>{{/if}}
+    </header>
+    <div class="article-content gh-content">
+        {{content}}
+    </div>
+</article>
+{{/post}}

@@ -1,0 +1,30 @@
+<header class="site-header" data-header>
+    <a class="brand-pill" href="{{@site.url}}" aria-label="返回首页">
+        <span class="brand-mark">
+            {{#if @site.icon}}
+                <img src="{{@site.icon}}" alt="{{@site.title}}">
+            {{else}}
+                <img src="{{asset "images/avatar.webp"}}" alt="Somnus">
+            {{/if}}
+        </span>
+        <span class="brand-copy"><strong>Somnus</strong><small>writing online</small></span>
+    </a>
+
+    <button class="mobile-brand" type="button" data-menu-toggle aria-expanded="false" aria-controls="site-nav">
+        <span>{{@site.title}}</span><span aria-hidden="true">☰</span>
+    </button>
+
+    <nav class="floating-nav" id="site-nav" aria-label="主导航" data-menu>
+        <a href="{{@site.url}}/" class="nav-home">⌂ <span>首页</span></a>
+        <a href="{{@site.url}}/posts/">文章</a>
+        <a href="{{@site.url}}/notes/">笔记</a>
+        <a href="{{@site.url}}/essays/">随笔</a>
+        <a href="{{@site.url}}/diary/">日记</a>
+        <a href="{{@site.url}}/tags/">更多</a>
+    </nav>
+
+    <div class="header-actions">
+        <button class="icon-button" type="button" data-ghost-search aria-label="搜索">⌕</button>
+        <button class="icon-button" type="button" data-theme-toggle aria-label="切换主题"><span data-theme-icon>◐</span></button>
+    </div>
+</header>

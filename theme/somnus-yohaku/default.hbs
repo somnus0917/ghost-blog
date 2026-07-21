@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="system">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#faf8f4">
+    <title>{{meta_title}}</title>
+    <link rel="stylesheet" href="{{asset "css/screen.css"}}">
+    <script>
+      window.MathJax = {
+        tex: {inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']]},
+        options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+      };
+    </script>
+    {{ghost_head}}
+</head>
+<body class="{{body_class}}">
+    <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+    {{> "site-header"}}
+    <main class="site-main">
+        {{{body}}}
+    </main>
+    {{> "site-footer"}}
+
+    <script defer src="{{asset "js/mermaid.js"}}"></script>
+    <script defer src="{{asset "js/main.js"}}"></script>
+    <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    {{ghost_foot}}
+</body>
+</html>

@@ -1,0 +1,48 @@
+{{!< default}}
+
+{{#post}}
+<article class="article-shell {{post_class}}">
+    <header class="article-header">
+        <p class="article-eyebrow">{{#foreach tags visibility="public" limit="1"}}{{name}}{{else}}POST{{/foreach}}</p>
+        <h1>{{title}}</h1>
+        <div class="article-meta">
+            <time datetime="{{date format="YYYY-MM-DD"}}">{{date format="YYYY年M月D日"}}</time>
+            <span>·</span>
+            <span>{{reading_time minute="1 分钟阅读" minutes="% 分钟阅读"}}</span>
+            {{#if featured}}<span>·</span><span>精选</span>{{/if}}
+        </div>
+    </header>
+
+    {{#if feature_image}}
+        <figure class="article-cover">
+            <img src="{{img_url feature_image size="l"}}" alt="{{#if feature_image_alt}}{{feature_image_alt}}{{else}}{{title}}{{/if}}">
+            {{#if feature_image_caption}}<figcaption>{{feature_image_caption}}</figcaption>{{/if}}
+        </figure>
+    {{/if}}
+
+    <div class="article-layout">
+        <aside class="article-toc" data-article-toc aria-label="文章目录">
+            <p>ON THIS PAGE</p>
+            <nav></nav>
+        </aside>
+        <div class="article-content gh-content">
+            {{content}}
+        </div>
+        <aside class="article-actions" aria-label="文章操作">
+            <button type="button" data-copy-url title="复制文章链接">↗</button>
+            <button type="button" data-ghost-search title="站内搜索">⌕</button>
+            <a href="#comments" title="查看评论">⌄</a>
+        </aside>
+    </div>
+
+    <footer class="article-footer">
+        <p>{{title}} · {{primary_author.name}}</p>
+        <p><a href="{{url absolute="true"}}">{{url absolute="true"}}</a></p>
+        <p>本文内容由 Somnus 创作，转载请保留原文链接。</p>
+    </footer>
+</article>
+
+<section class="comments-shell" id="comments">
+    {{comments title="讨论与留言" count=false}}
+</section>
+{{/post}}

@@ -1,0 +1,25 @@
+routes:
+  /:
+    template: home
+
+collections:
+  /posts/:
+    permalink: /p/{slug}/
+    template: index
+    filter: tag:hash-posts
+  /notes/:
+    permalink: /notes/{slug}/
+    template: index
+    filter: tag:hash-notes
+  /essays/:
+    permalink: /essays/{slug}/
+    template: index
+    filter: tag:hash-essays
+  /diary/:
+    permalink: /diary/{slug}/
+    template: index
+    filter: tag:hash-diary
+
+taxonomies:
+  tag: /tags/{slug}/
+  author: /author/{slug}/

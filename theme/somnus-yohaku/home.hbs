@@ -1,0 +1,95 @@
+{{!< default}}
+
+<section class="home-hero">
+    <div class="hero-confetti" aria-hidden="true"></div>
+    {{#if @site.icon}}
+        <img class="hero-avatar" src="{{@site.icon}}" alt="{{@site.title}}">
+    {{else}}
+        <img class="hero-avatar" src="{{asset "images/avatar.webp"}}" alt="Somnus">
+    {{/if}}
+    <h1 class="hero-title">
+        <span class="hero-intro">Hi, I'm <strong>Somnus</strong> <span aria-hidden="true">👋</span></span>
+        <span class="hero-statement">I turn <em>curiosity</em> into things with <b><i>✦</i> small systems</b></span>
+    </h1>
+    <p class="hero-kicker">A CURIOUS BUILDER DOCUMENTING INTERFACES, TOOLS, EXPERIMENTS AND DAILY LIFE.</p>
+    <div class="hero-quote">「把折腾过的东西写下来，把走过的路留给后来的人。」</div>
+    {{#get "posts" limit="1" as |all_posts|}}
+        <p class="hero-stats">{{pagination.total}} records <span>·</span> since 2026 <span>·</span> still growing</p>
+    {{/get}}
+    <div class="hero-socials" aria-label="社交与快捷入口">
+        <a href="https://github.com/somnus0917" target="_blank" rel="me noopener" aria-label="GitHub">GH</a>
+        <a href="mailto:mailmeblog@somnus.wiki" aria-label="Email">@</a>
+        <a href="{{@site.url}}/rss/" aria-label="RSS">◌</a>
+        <button type="button" data-ghost-search aria-label="搜索">⌕</button>
+        <button type="button" data-theme-toggle aria-label="切换主题"><span data-theme-icon>◐</span></button>
+    </div>
+    <a class="hero-scroll" href="#recent" aria-label="阅读最近文章">⌄</a>
+</section>
+
+<section class="content-section" id="recent">
+    <header class="section-heading">
+        <p>RECENT WRITING</p>
+        <a href="{{@site.url}}/posts/">全部文章 ↗</a>
+    </header>
+    {{#get "posts" filter="tag:hash-posts" include="tags" limit="5" as |recent_posts|}}
+        <div class="recent-list">
+            {{#foreach recent_posts}}
+                {{> "post-row"}}
+            {{/foreach}}
+        </div>
+    {{/get}}
+</section>
+
+<section class="content-section home-streams">
+    <div class="stream-panel">
+        <header class="section-heading">
+            <p>FIELD NOTES</p>
+            <a href="{{@site.url}}/notes/">全部笔记 ↗</a>
+        </header>
+        {{#get "posts" filter="tag:hash-notes" limit="3" as |notes|}}
+            <div class="stream-list">
+                {{#foreach notes}}
+                    <a class="stream-item" href="{{url}}">
+                        <span>{{date format="MM / DD"}}</span>
+                        <div><h2>{{title}}</h2><p>{{excerpt words="22"}}</p></div>
+                    </a>
+                {{/foreach}}
+            </div>
+        {{/get}}
+    </div>
+    <div class="stream-panel">
+        <header class="section-heading">
+            <p>RECENT DAYS</p>
+            <a href="{{@site.url}}/diary/">全部日记 ↗</a>
+        </header>
+        {{#get "posts" filter="tag:hash-diary" limit="3" as |days|}}
+            <div class="stream-list diary-stream">
+                {{#foreach days}}
+                    <a class="stream-item" href="{{url}}">
+                        <span>{{date format="MM / DD"}}</span>
+                        <div><h2>{{title}}</h2><p>{{excerpt words="22"}}</p></div>
+                    </a>
+                {{/foreach}}
+            </div>
+        {{/get}}
+    </div>
+</section>
+
+<section class="season-panel">
+    <div class="season-copy">
+        <p class="season-label">WRITING THROUGH THE SEASONS</p>
+        <h2>技术、生活与观察，沿时间慢慢生长。</h2>
+        <p>每个节点都是一篇留下来的记录。</p>
+    </div>
+    {{#get "posts" limit="6" as |timeline_posts|}}
+        <div class="season-track">
+            {{#foreach timeline_posts}}
+                <a href="{{url}}"><span>{{date format="MM.DD"}}</span><strong>{{title}}</strong></a>
+            {{/foreach}}
+        </div>
+    {{/get}}
+    <div class="season-links">
+        <a href="{{@site.url}}/posts/">完整时间线 <span>↗</span></a>
+        <a href="{{@site.url}}/essays/">读随笔 <span>↗</span></a>
+    </div>
+</section>

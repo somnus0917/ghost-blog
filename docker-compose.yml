@@ -1,0 +1,57 @@
+services:
+  ghost:
+    image: ghost:6-alpine
+    container_name: somnus-ghost
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      url: ${GHOST_URL}
+      database__client: mysql
+      database__connection__host: mysql
+      database__connection__port: 3306
+      database__connection__user: ${MYSQL_USER}
+      database__connection__password: ${MYSQL_PASSWORD}
+      database__connection__database: ${MYSQL_DATABASE}
+      database__pool__min: 0
+      database__pool__max: 5
+      privacy__useUpdateCheck: "false"
+      security__staffDeviceVerification: "false"
+    ports:
+      - "127.0.0.1:2368:2368"
+    volumes:
+      - ./content:/var/lib/ghost/content
+    networks:
+      - ghost-internal
+      - proxy
+
+  mysql:
+    image: mysql:8.0
+    container_name: somnus-ghost-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    volumes:
+      - ./mysql:/var/lib/mysql
+    networks:
+      - ghost-internal
+
+networks:
+  ghost-internal:
+    internal: true
+  proxy:
+    external: true

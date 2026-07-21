@@ -1,0 +1,12 @@
+<article class="post-row {{post_class}}">
+    <a href="{{url}}" class="post-row-link">
+        <span class="post-index" aria-hidden="true"></span>
+        <div>
+            <h2>{{title}}</h2>
+            <div class="post-row-kind">
+                {{#foreach tags visibility="public" limit="1"}}<span>{{name}}</span>{{else}}<span>记录</span>{{/foreach}}
+            </div>
+        </div>
+        <time datetime="{{date format="YYYY-MM-DD"}}">{{date format="YYYY年M月D日"}}</time>
+    </a>
+</article>

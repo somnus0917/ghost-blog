@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+build/
+content/
+mysql/
+backups/
+theme/somnus-yohaku/assets/fonts/
+__pycache__/
+*.py[cod]
+.DS_Store

@@ -1,0 +1,10 @@
+[Unit]
+Description=Back up Somnus Ghost database and content
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+ExecStart=/home/ubuntu/ghost-blog/server/backup.sh /home/ubuntu/ghost-blog

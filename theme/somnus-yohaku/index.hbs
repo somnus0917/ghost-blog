@@ -1,0 +1,15 @@
+{{!< default}}
+
+<section class="archive-shell">
+    <header class="archive-header">
+        <p>ARCHIVE</p>
+        <h1>{{#is "tag"}}{{tag.name}}{{else}}{{#is "author"}}作者归档{{else}}写作归档{{/is}}{{/is}}</h1>
+        <p>{{#is "tag"}}{{tag.description}}{{else}}按时间收纳文章、笔记与阶段性的记录。{{/is}}</p>
+    </header>
+    <div class="archive-list">
+        {{#foreach posts}}
+            {{> "post-row"}}
+        {{/foreach}}
+    </div>
+    {{pagination}}
+</section>

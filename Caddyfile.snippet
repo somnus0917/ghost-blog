@@ -1,0 +1,19 @@
+blog.somnus.wiki {
+    encode zstd gzip
+
+    handle /.ghost/activitypub/* {
+        reverse_proxy https://ap.ghost.org
+    }
+
+    handle /.well-known/webfinger {
+        reverse_proxy https://ap.ghost.org
+    }
+
+    handle /.well-known/nodeinfo {
+        reverse_proxy https://ap.ghost.org
+    }
+
+    handle {
+        reverse_proxy somnus-ghost:2368
+    }
+}
