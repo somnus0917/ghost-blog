@@ -4,6 +4,34 @@ This directory contains the reproducible Ghost 6 deployment, the custom
 `somnus-yohaku` theme, and the Zola-to-Ghost migration tooling.
 
 后台登录、写作、内部标签和评论账号说明见 [ADMIN_GUIDE.md](ADMIN_GUIDE.md)。
+艺术风格、字体和本地预览说明见 [DESIGN.md](DESIGN.md)。
+
+## Local theme workflow
+
+The standalone project directory is this repository. From its root, run:
+
+```bash
+cp .env.example .env
+make dev
+make check
+```
+
+`make dev` starts a local Ghost instance at `http://127.0.0.1:2368` and syncs the
+theme into its content directory. Commit and push visual changes to `main` after
+`make check` passes.
+
+The theme self-hosts LXGW WenKai in WOFF2 format. The upstream OFL license is
+included in `theme/somnus-yohaku/assets/fonts/OFL.txt`.
+
+## GitHub Actions deployment
+
+`.github/workflows/theme-cicd.yml` validates pull requests. Theme changes pushed to
+`main` are built once and deployed through Ghost's official Admin API theme action.
+This grants no Tencent Cloud shell access. Production secrets are stored in GitHub
+Actions, not in this repository:
+
+- `GHOST_ADMIN_API_URL`
+- `GHOST_ADMIN_API_KEY`
 
 ## Build the migration bundle
 

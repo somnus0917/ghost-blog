@@ -11,7 +11,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_THEME = ROOT / "ghost" / "theme" / "somnus-yohaku"
 DEFAULT_OUTPUT = ROOT / "ghost" / "build" / "somnus-yohaku.zip"
-EXCLUDED_PARTS = {".DS_Store", "fonts"}
+EXCLUDED_PARTS = {".DS_Store"}
+EXCLUDED_FILES = {"MapleMono-NF-CN-Regular.woff2"}
 
 
 def main() -> int:
@@ -25,7 +26,9 @@ def main() -> int:
     files = sorted(
         path
         for path in theme.rglob("*")
-        if path.is_file() and not (set(path.relative_to(theme).parts) & EXCLUDED_PARTS)
+        if path.is_file()
+        and path.name not in EXCLUDED_FILES
+        and not (set(path.relative_to(theme).parts) & EXCLUDED_PARTS)
     )
     output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:

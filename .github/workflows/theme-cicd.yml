@@ -1,0 +1,75 @@
+name: Ghost theme CI/CD
+
+on:
+  pull_request:
+    paths:
+      - "theme/**"
+      - "scripts/build_theme.py"
+      - "scripts/check_theme.py"
+      - "server/deploy-theme.sh"
+      - "Makefile"
+      - ".github/workflows/theme-cicd.yml"
+  push:
+    branches: [main]
+    paths:
+      - "theme/**"
+      - "scripts/build_theme.py"
+      - "scripts/check_theme.py"
+      - "server/deploy-theme.sh"
+      - "Makefile"
+      - ".github/workflows/theme-cicd.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ghost-theme-production
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build theme
+        run: python3 scripts/build_theme.py --theme theme/somnus-yohaku --output build/somnus-yohaku.zip
+      - name: Validate theme archive
+        run: python3 scripts/check_theme.py
+      - name: Upload checked archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: somnus-yohaku-${{ github.sha }}
+          path: build/somnus-yohaku.zip
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      GHOST_ADMIN_API_URL: ${{ secrets.GHOST_ADMIN_API_URL }}
+      GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: somnus-yohaku-${{ github.sha }}
+          path: build
+      - name: Explain pending deployment credentials
+        if: env.GHOST_ADMIN_API_KEY == ''
+        run: |
+          echo "Theme validation passed; deployment is waiting for GHOST_ADMIN_API_KEY."
+      - name: Deploy through the Ghost Admin API
+        if: env.GHOST_ADMIN_API_KEY != ''
+        uses: TryGhost/action-deploy-theme@v2
+        with:
+          api-url: ${{ env.GHOST_ADMIN_API_URL }}
+          api-key: ${{ env.GHOST_ADMIN_API_KEY }}
+          version: v6.0
+          file: build/somnus-yohaku.zip

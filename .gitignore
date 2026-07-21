@@ -5,7 +5,10 @@ build/
 content/
 mysql/
 backups/
-theme/somnus-yohaku/assets/fonts/
+theme/somnus-yohaku/assets/fonts/*
+!theme/somnus-yohaku/assets/fonts/LXGWWenKai-Regular.woff2
+!theme/somnus-yohaku/assets/fonts/OFL.txt
 __pycache__/
 *.py[cod]
 .DS_Store
+.playwright-cli/
