@@ -11,6 +11,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 THEME_ROOT = REPO_ROOT / "theme" / "somnus-yohaku"
+SHARED_FONT = REPO_ROOT / "shared" / "fonts" / "LXGWWenKai-Regular.woff2"
 ARCHIVE = REPO_ROOT / "build" / "somnus-yohaku.zip"
 REQUIRED = {
     "default.hbs",
@@ -19,8 +20,6 @@ REQUIRED = {
     "package.json",
     "assets/css/screen.css",
     "assets/js/main.js",
-    "assets/fonts/LXGWWenKai-Regular.woff2",
-    "assets/fonts/OFL.txt",
 }
 
 
@@ -40,6 +39,10 @@ def main() -> int:
     css = (THEME_ROOT / "assets" / "css" / "screen.css").read_text(encoding="utf-8")
     if "LXGW WenKai Web" not in css or "@font-face" not in css:
         fail("LXGW WenKai web font is not wired into screen.css")
+    if "/content/images/fonts/LXGWWenKai-Regular.woff2" not in css:
+        fail("LXGW WenKai must use the persistent Ghost content font path")
+    if not SHARED_FONT.is_file():
+        fail(f"missing shared web font: {SHARED_FONT}")
     with zipfile.ZipFile(ARCHIVE) as archive:
         names = set(archive.namelist())
         missing = sorted(REQUIRED - names)
@@ -47,11 +50,13 @@ def main() -> int:
             fail(f"archive is missing: {', '.join(missing)}")
         if "assets/fonts/MapleMono-NF-CN-Regular.woff2" in names:
             fail("unused Maple Mono font must not be shipped")
+        if any(name.endswith(".woff2") for name in names):
+            fail("large fonts must stay outside the repeatedly uploaded theme archive")
         bad = [name for name in names if name.startswith("/") or ".." in Path(name).parts]
         if bad:
             fail("archive contains unsafe paths")
     size_mib = ARCHIVE.stat().st_size / (1024 * 1024)
-    if size_mib > 20:
+    if size_mib > 2:
         fail(f"archive is unexpectedly large: {size_mib:.1f} MiB")
     print(f"theme check passed: {len(names)} files, {size_mib:.1f} MiB")
     return 0

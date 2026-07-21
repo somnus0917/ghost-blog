@@ -18,22 +18,26 @@ The main design tokens are at the top of `screen.css`. Change `--paper`, `--ink`
 ## Typography
 
 The site self-hosts the official LXGW WenKai Regular web font at
-`assets/fonts/LXGWWenKai-Regular.woff2`. `font-display: swap` keeps text visible while
-the font downloads. The original SIL Open Font License is included beside the font.
+`shared/fonts/LXGWWenKai-Regular.woff2`. `make dev` installs it into Ghost's persistent
+`content/images/fonts/` directory, and production provisioning does the same. Keeping
+the 7.5 MiB font outside the repeatedly uploaded theme zip prevents cross-border CI
+timeouts. `font-display: swap` keeps text visible while it downloads, and the original
+SIL Open Font License is included beside the font.
 
 The quickest way to change the site's font size is to edit these variables near the
 top of `assets/css/screen.css`:
 
 ```css
---type-body: 17px;            /* global body and interface baseline */
---type-ui: 13px;              /* navigation, summaries, secondary text */
---type-small: 11px;           /* dates, labels, metadata */
---type-list-title: 18px;      /* homepage and archive article titles */
---type-article: 18px;         /* desktop article body */
---type-article-mobile: 17px;  /* mobile article body */
+--type-body: 19px;            /* global body and interface baseline */
+--type-ui: 15px;              /* navigation, summaries, secondary text */
+--type-small: 13px;           /* dates, labels, metadata */
+--type-list-title: 20px;      /* homepage and archive article titles */
+--type-article: 20px;         /* desktop article body */
+--type-article-mobile: 19px;  /* mobile article body */
 ```
 
-For a visibly larger first test, try `18 / 14 / 12 / 20 / 19 / 18px` in that order.
+Adjust those six values in that order to scale the interface without hunting through
+individual selectors.
 Run `make dev` after saving, then refresh the local page.
 
 ## Local loop

@@ -30,7 +30,8 @@ API key to disk or command output. Run it again with
 posts to the repository versions.
 
 The theme self-hosts LXGW WenKai in WOFF2 format. The upstream OFL license is
-included in `theme/somnus-yohaku/assets/fonts/OFL.txt`.
+included in `shared/fonts/OFL.txt`. The font is installed once into Ghost's persistent
+`content/images/fonts/` directory, keeping routine theme deployments small and fast.
 
 ## GitHub Actions deployment
 

@@ -21,7 +21,7 @@ trap cleanup EXIT
 unzip -q "$archive" -d "$staging"
 test -f "$staging/package.json"
 test -f "$staging/assets/css/screen.css"
-test -f "$staging/assets/fonts/LXGWWenKai-Regular.woff2"
+test -f "$install_dir/content/images/fonts/LXGWWenKai-Regular.woff2"
 
 rm -rf "$previous"
 if [[ -d "$active" ]]; then
