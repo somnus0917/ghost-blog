@@ -1,0 +1,23 @@
+name = "somnus-blog-engagement"
+main = "src/index.mjs"
+compatibility_date = "2026-07-22"
+workers_dev = false
+preview_urls = false
+
+routes = [
+  { pattern = "engagement.somnus.wiki", custom_domain = true }
+]
+
+[vars]
+ALLOWED_ORIGIN = "https://blog.somnus.wiki"
+TINYBIRD_API_URL = "https://api.ap-east-1.aws.tinybird.co"
+TINYBIRD_SITE_UUID = "c7e5aff3-9c89-4749-9506-f7a99c9ea550"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "somnus-blog-engagement"
+database_id = "replace-after-running-wrangler-d1-create"
+migrations_dir = "migrations"
+
+[triggers]
+crons = ["17 * * * *"]

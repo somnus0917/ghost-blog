@@ -1,6 +1,14 @@
 blog.somnus.wiki {
     encode zstd gzip
 
+    handle_path /.ghost/analytics/* {
+        reverse_proxy somnus-traffic-analytics:3000
+    }
+
+    handle /api/engagement/* {
+        reverse_proxy https://engagement.somnus.wiki
+    }
+
     handle /.ghost/activitypub/* {
         reverse_proxy https://ap.ghost.org
     }

@@ -11,3 +11,5 @@ __pycache__/
 *.py[cod]
 .DS_Store
 .playwright-cli/
+worker/wrangler.toml
+.wrangler/

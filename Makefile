@@ -6,7 +6,7 @@ LOCAL_FONT_DIR := content/images/fonts
 LOCAL_PORT ?= 2369
 LOCAL_URL ?= http://127.0.0.1:$(LOCAL_PORT)
 
-.PHONY: theme check dev demo logs stop
+.PHONY: theme check dev demo logs stop analytics-login analytics-tokens analytics-deploy
 
 theme:
 	$(PYTHON) scripts/build_theme.py --theme $(THEME) --output build/somnus-yohaku.zip
@@ -15,11 +15,14 @@ check: theme
 	$(PYTHON) scripts/check_theme.py
 	PYTHONPYCACHEPREFIX=build/pycache $(PYTHON) -m py_compile scripts/*.py
 	bash -n server/*.sh
+	node --test worker/test/*.test.mjs
 	docker compose --env-file .env.example config --quiet
 
 dev:
 	mkdir -p $(LOCAL_THEME)
 	rsync -a --delete $(THEME)/ $(LOCAL_THEME)/
+	mkdir -p content/settings
+	rsync -a routes.yaml content/settings/routes.yaml
 	mkdir -p $(LOCAL_FONT_DIR)
 	rsync -a $(SHARED_FONT_DIR)/ $(LOCAL_FONT_DIR)/
 	docker network inspect proxy >/dev/null 2>&1 || docker network create proxy
@@ -35,3 +38,13 @@ logs:
 
 stop:
 	docker compose down
+
+analytics-login:
+	docker compose --profile analytics run --rm tinybird-login
+
+analytics-tokens:
+	docker compose --profile analytics run --rm tinybird-login get-tokens
+
+analytics-deploy:
+	docker compose --profile analytics run --rm tinybird-sync
+	docker compose --profile analytics run --rm tinybird-deploy

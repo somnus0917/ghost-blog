@@ -9,8 +9,13 @@
             <time datetime="{{date format="YYYY-MM-DD"}}">{{date format="YYYY年M月D日"}}</time>
             <span>·</span>
             <span>{{reading_time minute="1 分钟阅读" minutes="% 分钟阅读"}}</span>
+            <span class="article-engagement" data-post-engagement data-post-uuid="{{uuid}}" hidden>
+                <span data-engagement-views-wrap hidden><span data-engagement-views>0</span> 次阅读</span>
+                <span data-engagement-likes-wrap hidden><span data-engagement-likes>0</span> 次喜欢</span>
+            </span>
             {{#if featured}}<span>·</span><span>精选</span>{{/if}}
         </div>
+        <p class="article-presence" data-engagement-presence aria-live="polite" hidden></p>
     </header>
 
     {{#if feature_image}}
@@ -29,6 +34,7 @@
             {{content}}
         </div>
         <aside class="article-actions" aria-label="文章操作">
+            <button type="button" data-like-post title="喜欢这篇文章" aria-label="喜欢这篇文章" aria-pressed="false" hidden>♡</button>
             <button type="button" data-copy-url title="复制文章链接">↗</button>
             <button type="button" data-ghost-search title="站内搜索">⌕</button>
             <a href="#comments" title="查看评论">⌄</a>

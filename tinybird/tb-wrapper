@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ ! -f "./.tinyb" ]]; then
+    if [[ -f "/home/tinybird/.tinyb" ]]; then
+        cp /home/tinybird/.tinyb ./.tinyb
+    else
+        echo "No Tinybird login found. Run 'make analytics-login' first." >&2
+        exit 1
+    fi
+fi
+
+exec tb "$@"

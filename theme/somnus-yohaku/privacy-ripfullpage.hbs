@@ -1,0 +1,138 @@
+{{!< default}}
+{{#contentFor "title_prefix"}}ripfullpage Privacy Policy · {{/contentFor}}
+
+<article class="article-shell page-shell privacy-page">
+    <header class="article-header privacy-header" lang="en">
+        <p class="article-eyebrow">PRIVACY / RIPFULLPAGE</p>
+        <h1>ripfullpage Privacy Policy</h1>
+        <p class="page-excerpt">This policy explains how the ripfullpage browser extension processes screenshots and related data locally on your device.</p>
+        <div class="privacy-meta" aria-label="Policy information">
+            <span>Effective date: July 22, 2026</span>
+            <a href="https://github.com/somnus0917/ripfullpage" rel="noopener noreferrer" target="_blank">View source code ↗</a>
+        </div>
+    </header>
+
+    <div class="article-content gh-content privacy-content">
+        <div lang="en">
+            <aside class="privacy-summary" aria-label="Privacy policy summary">
+                <strong>At a glance</strong>
+                <p>ripfullpage does not upload screenshots, browsing history, or personal information to the developer. It contains no advertising, user tracking, or analytics service. Screenshot capture and editing take place in your browser and on your device.</p>
+            </aside>
+
+            <section class="privacy-section">
+                <h2>1. Data processed by the extension</h2>
+                <p>When you initiate a capture, the extension temporarily accesses the visible content of the active tab to scroll the page, identify a selected region or element, and generate a screenshot. A screenshot may contain personal or sensitive information visible on the page, so please review it before saving, copying, or sharing it.</p>
+                <p>The following data may be stored in extension-managed browser storage:</p>
+                <ul>
+                    <li>Up to 12 recent screenshots and their thumbnails;</li>
+                    <li>The source page URL, used for screenshot history and filenames;</li>
+                    <li>Your Chinese or English language preference;</li>
+                    <li>The screenshot currently open in the editor, stored for the browser session.</li>
+                </ul>
+                <p>This data is not sent by the extension to the developer or any remote server.</p>
+            </section>
+
+            <section class="privacy-section">
+                <h2>2. How permissions are used</h2>
+                <dl class="privacy-permissions">
+                    <div>
+                        <dt><code>activeTab</code> / <code>tabs</code></dt>
+                        <dd>Identify the user-selected tab, read its source URL, and open the screenshot editor when you initiate a capture.</dd>
+                    </div>
+                    <div>
+                        <dt><code>scripting</code></dt>
+                        <dd>Inject capture code on demand for page scrolling, region selection, element detection, and screenshot stitching.</dd>
+                    </div>
+                    <div>
+                        <dt><code>storage</code> / <code>unlimitedStorage</code></dt>
+                        <dd>Keep language settings, the current screenshot, and recent screenshot history locally. Large full-page captures may require additional local space.</dd>
+                    </div>
+                    <div>
+                        <dt><code>clipboardWrite</code></dt>
+                        <dd>Write an edited screenshot to the system clipboard only when you choose Copy.</dd>
+                    </div>
+                </dl>
+                <p>The extension declares no persistent host permissions for all websites. Page access occurs only after a user initiates a capture.</p>
+            </section>
+
+            <section class="privacy-section">
+                <h2>3. Sharing, downloads, and feedback</h2>
+                <p>Downloaded images and PDFs are saved directly to your device. Copying uses the system clipboard. Sharing uses the browser or operating system share interface; a file is transferred to a third-party application only after you choose and confirm a destination, and that application’s privacy policy then applies.</p>
+                <p>The Feedback button only opens your default email client. Whether to send an email, its content, and any attachment remain under your control.</p>
+            </section>
+
+            <section class="privacy-section">
+                <h2>4. Retention and deletion</h2>
+                <p>You can delete individual screenshot history items or clear all recent screenshots from the extension popup. Session data expires with the relevant browser session. Uninstalling the extension will normally remove its browser-managed local data.</p>
+            </section>
+
+            <section class="privacy-section">
+                <h2>5. Changes to this policy</h2>
+                <p>If the extension materially changes its permissions or data practices, this page and the effective date above will be updated. Please review the current policy after installing a new version.</p>
+            </section>
+
+            <section class="privacy-section">
+                <h2>6. Contact</h2>
+                <p>Questions about this policy or ripfullpage’s data practices can be sent to <a href="mailto:contact@somnus.wiki">contact@somnus.wiki</a> or submitted through <a href="https://github.com/somnus0917/ripfullpage/issues" rel="noopener noreferrer" target="_blank">GitHub Issues</a>.</p>
+            </section>
+        </div>
+
+        <hr class="privacy-divider">
+
+        <section class="privacy-section privacy-chinese" lang="zh-CN">
+            <p class="article-eyebrow">中文版</p>
+            <h2>ripfullpage 隐私政策</h2>
+            <p><strong>生效日期：</strong>2026 年 7 月 22 日</p>
+
+            <aside class="privacy-summary" aria-label="隐私政策摘要">
+                <strong>核心说明</strong>
+                <p>ripfullpage 不会将截图、浏览记录或个人信息上传到开发者服务器，也不包含广告、用户追踪或分析服务。截图和编辑过程在你的浏览器与设备上完成。</p>
+            </aside>
+
+            <h3>1. 扩展处理的数据</h3>
+            <p>当你主动使用截图功能时，扩展会临时访问当前标签页的可见内容，以滚动页面、识别选区或元素并生成截图。截图可能包含网页中显示的个人信息或敏感内容，因此请在保存、复制或分享前自行检查。</p>
+            <p>以下数据会保存在浏览器的扩展本地存储中：</p>
+            <ul>
+                <li>最近生成的截图及缩略图，最多保留 12 条；</li>
+                <li>截图来源页面的网址，用于历史记录和生成文件名；</li>
+                <li>扩展的中英文语言偏好；</li>
+                <li>当前编辑中的截图，临时保存在浏览器会话存储中。</li>
+            </ul>
+            <p>这些数据不会由扩展发送给开发者或其他远程服务器。</p>
+
+            <h3>2. 权限用途</h3>
+            <dl class="privacy-permissions">
+                <div>
+                    <dt><code>activeTab</code> / <code>tabs</code></dt>
+                    <dd>在你触发截图时识别当前标签页、获取来源网址并打开截图编辑器。</dd>
+                </div>
+                <div>
+                    <dt><code>scripting</code></dt>
+                    <dd>按需注入截图脚本，用于页面滚动、区域选择、元素识别和截图拼接。</dd>
+                </div>
+                <div>
+                    <dt><code>storage</code> / <code>unlimitedStorage</code></dt>
+                    <dd>在设备本地保存语言设置、当前截图和最近截图历史；较大的全页截图可能需要较多本地空间。</dd>
+                </div>
+                <div>
+                    <dt><code>clipboardWrite</code></dt>
+                    <dd>仅在你点击“复制”时，将编辑后的截图写入系统剪贴板。</dd>
+                </div>
+            </dl>
+            <p>扩展未声明对所有网站持续生效的主机权限，页面访问只在用户主动触发截图时发生。</p>
+
+            <h3>3. 分享、下载与反馈</h3>
+            <p>下载图片或 PDF 时，文件直接保存到你的设备。复制操作使用系统剪贴板。点击分享时，扩展调用浏览器或操作系统提供的原生分享界面；只有在你选择目标并确认后，数据才会交给相应的第三方应用，其后续处理受该应用自身隐私政策约束。</p>
+            <p>点击“反馈”只会打开你的默认邮件客户端。是否发送邮件、邮件正文以及随附内容均由你决定。</p>
+
+            <h3>4. 数据删除与保留</h3>
+            <p>你可以在扩展弹窗中逐条删除截图历史，或使用“清空”删除全部最近截图。会话数据会在相应浏览器会话结束后失效；卸载扩展通常会同时移除由浏览器管理的扩展本地数据。</p>
+
+            <h3>5. 政策更新</h3>
+            <p>如果扩展的数据处理方式或权限发生实质变化，本页面会同步更新，并修改页面顶部的生效日期。建议在安装新版本后查看最新政策。</p>
+
+            <h3>6. 联系方式</h3>
+            <p>如对本政策或 ripfullpage 的数据处理方式有疑问，请发送邮件至 <a href="mailto:contact@somnus.wiki">contact@somnus.wiki</a>，或通过 <a href="https://github.com/somnus0917/ripfullpage/issues" rel="noopener noreferrer" target="_blank">GitHub Issues</a> 联系。</p>
+        </section>
+    </div>
+</article>

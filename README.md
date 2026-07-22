@@ -5,6 +5,7 @@ This directory contains the reproducible Ghost 6 deployment, the custom
 
 后台登录、写作、内部标签和评论账号说明见 [ADMIN_GUIDE.md](ADMIN_GUIDE.md)。
 艺术风格、字体和本地预览说明见 [DESIGN.md](DESIGN.md)。
+文章阅读量、实时在线和点赞服务见 [ANALYTICS_GUIDE.md](ANALYTICS_GUIDE.md)。
 
 ## Local theme workflow
 
