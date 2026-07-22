@@ -1,0 +1,14 @@
+{{!< default}}
+<section class="archive-shell">
+  <header class="archive-header">
+    <p>FIELD NOTES</p>
+    <h1>笔记</h1>
+    <p>学习过程中留下的知识，方法与实践记录。</p>
+  </header>
+  <div class="archive-list">
+    {{#foreach posts}}
+        {{>"post-row"}}
+    {{/foreach}}
+  </div>
+  {{pagination}}
+</section>

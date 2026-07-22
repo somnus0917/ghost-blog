@@ -1,0 +1,16 @@
+{{!< default}}
+
+<section class="archive-shell">
+    <header class="archive-header">
+        <p>FIELD DIARY</p>
+        <h1>日记</h1>
+    </header>
+
+    <div class="archive-list">
+        {{#foreach posts}}
+            {{> "post-row"}}
+        {{/foreach}}
+    </div>
+
+    {{pagination}}
+</section>

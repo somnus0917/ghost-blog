@@ -1,0 +1,17 @@
+{{!< default}}
+
+<section class="archive-shell">
+    <header class="archive-header">
+        <p>FIELD POSTS</p>
+        <h1>博客</h1>
+        <p>记录开发的日常，做一些有趣的小玩意。</p>
+    </header>
+
+    <div class="archive-list">
+        {{#foreach posts}}
+            {{> "post-row"}}
+        {{/foreach}}
+    </div>
+
+    {{pagination}}
+</section>

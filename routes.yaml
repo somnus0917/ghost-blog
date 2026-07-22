@@ -2,22 +2,28 @@ routes:
   /:
     template: home
 
+  /about/:
+    template: about
+
 collections:
   /posts/:
     permalink: /p/{slug}/
-    template: index
+    template: posts
     filter: tag:hash-posts
+
   /notes/:
     permalink: /notes/{slug}/
-    template: index
+    template: notes
     filter: tag:hash-notes
+
   /essays/:
     permalink: /essays/{slug}/
-    template: index
+    template: essays
     filter: tag:hash-essays
+
   /diary/:
     permalink: /diary/{slug}/
-    template: index
+    template: diary
     filter: tag:hash-diary
 
 taxonomies:
