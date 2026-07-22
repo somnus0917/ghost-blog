@@ -17,10 +17,11 @@ from pathlib import Path
 from urllib.parse import quote
 
 
-ROOT = Path(__file__).resolve().parents[2]
-CONTENT_ROOT = ROOT / "content"
-PUBLIC_ROOT = ROOT / "public"
-DEFAULT_OUTPUT = ROOT / "ghost" / "build"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_ZOLA_ROOT = REPO_ROOT.parent
+CONTENT_ROOT = DEFAULT_ZOLA_ROOT / "content"
+PUBLIC_ROOT = DEFAULT_ZOLA_ROOT / "public"
+DEFAULT_OUTPUT = REPO_ROOT / "build"
 SKIP_NAMES = {"_index.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md"}
 SECTION_TAGS = {
     "posts": ("#文章", "hash-posts"),
@@ -238,7 +239,7 @@ def build_bundle(output_dir: Path) -> tuple[int, int, int]:
         lines.append(f"  {yaml_quote(old_url)}: {yaml_quote(new_url)}")
     lines.extend(["", "302:", ""])
     redirects_path.write_text("\n".join(lines), encoding="utf-8")
-    shutil.copy2(ROOT / "ghost" / "routes.yaml", output_dir / "routes.yaml")
+    shutil.copy2(REPO_ROOT / "routes.yaml", output_dir / "routes.yaml")
 
     zip_path = output_dir / "somnus-zola.ghost.zip"
     with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
@@ -260,9 +261,20 @@ def build_bundle(output_dir: Path) -> tuple[int, int, int]:
 
 
 def main() -> int:
+    global CONTENT_ROOT, PUBLIC_ROOT
+
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--zola-root",
+        type=Path,
+        default=DEFAULT_ZOLA_ROOT,
+        help="Zola project containing content/ and public/ (default: repository parent)",
+    )
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
+    zola_root = args.zola_root.resolve()
+    CONTENT_ROOT = zola_root / "content"
+    PUBLIC_ROOT = zola_root / "public"
     try:
         item_count, tag_count, redirect_count = build_bundle(args.output.resolve())
     except Exception as exc:

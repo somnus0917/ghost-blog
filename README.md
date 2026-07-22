@@ -45,18 +45,25 @@ Actions, not in this repository:
 
 ## Build the migration bundle
 
+Build the old Zola site first, then point the migration tool at that Zola project.
+Run these commands from this Ghost repository:
+
 ```bash
-zola build --force --drafts
-python3 ghost/scripts/migrate_zola.py
-python3 ghost/scripts/build_theme.py
+zola --root /path/to/zola-site build --force --drafts
+python3 scripts/migrate_zola.py --zola-root /path/to/zola-site
+make theme
 ```
 
-Generated files are written to `ghost/build/` and ignored by Git.
+Generated files are written to `build/` and ignored by Git. If the Zola project is
+the parent directory of this repository, `--zola-root` may be omitted.
 
 ## Deploy on the Tencent Cloud host
 
 ```bash
-rsync -av --exclude build --exclude .env ghost/ tencent-cloud:/home/ubuntu/ghost-blog/
+rsync -av \
+  --exclude .git --exclude .env --exclude .private \
+  --exclude build --exclude content --exclude mysql --exclude backups \
+  ./ tencent-cloud:/home/ubuntu/ghost-blog/
 ssh tencent-cloud 'bash /home/ubuntu/ghost-blog/server/bootstrap.sh'
 ```
 
@@ -71,17 +78,17 @@ Provision through the tunnel. The script creates the owner on first run, imports
 new content idempotently, and activates the theme:
 
 ```bash
-python3 ghost/scripts/provision_ghost.py --url http://localhost:2368
-python3 ghost/scripts/configure_ghost.py --url http://localhost:2368
+python3 scripts/provision_ghost.py --url http://localhost:2368
+python3 scripts/configure_ghost.py --url http://localhost:2368
 ```
 
 After changing migration logic, update existing items in place while preserving
 their Ghost-generated slugs:
 
 ```bash
-python3 ghost/scripts/provision_ghost.py --url http://localhost:2368 --update-existing
-python3 ghost/scripts/rebuild_redirects.py --url http://localhost:2368
-python3 ghost/scripts/reconcile_ghost.py --url http://localhost:2368 --report
+python3 scripts/provision_ghost.py --url http://localhost:2368 --update-existing
+python3 scripts/rebuild_redirects.py --url http://localhost:2368 --zola-root /path/to/zola-site
+python3 scripts/reconcile_ghost.py --url http://localhost:2368 --report
 ```
 
 Owner credentials are stored locally in `.private/ghost-owner.json` with mode

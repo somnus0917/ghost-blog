@@ -20,6 +20,8 @@ REQUIRED = {
     "package.json",
     "assets/css/screen.css",
     "assets/js/main.js",
+    "assets/js/mathjax.js",
+    "assets/js/mathjax.LICENSE.txt",
 }
 
 
@@ -37,12 +39,21 @@ def main() -> int:
     if not str(package.get("engines", {}).get("ghost", "")).startswith(">=6"):
         fail("theme must target Ghost 6 or newer")
     css = (THEME_ROOT / "assets" / "css" / "screen.css").read_text(encoding="utf-8")
+    default_template = (THEME_ROOT / "default.hbs").read_text(encoding="utf-8")
+    post_template = (THEME_ROOT / "post.hbs").read_text(encoding="utf-8")
+    main_js = (THEME_ROOT / "assets" / "js" / "main.js").read_text(encoding="utf-8")
     if "LXGW WenKai Web" not in css or "@font-face" not in css:
         fail("LXGW WenKai web font is not wired into screen.css")
     if "/content/images/fonts/LXGWWenKai-Regular.woff2" not in css:
         fail("LXGW WenKai must use the persistent Ghost content font path")
     if not SHARED_FONT.is_file():
         fail(f"missing shared web font: {SHARED_FONT}")
+    if "cdn.jsdelivr.net/npm/mathjax" in default_template:
+        fail("MathJax must be loaded from the theme bundle")
+    if 'asset "js/mathjax.js"' not in default_template:
+        fail("default.hbs must load the local MathJax bundle")
+    if 'mode="auto"' not in post_template or "comments-dark" not in main_js:
+        fail("Ghost comments must synchronize with the site color mode")
     with zipfile.ZipFile(ARCHIVE) as archive:
         names = set(archive.namelist())
         missing = sorted(REQUIRED - names)

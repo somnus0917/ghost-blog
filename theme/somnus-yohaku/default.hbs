@@ -3,8 +3,15 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#faf8f4">
+    <meta name="theme-color" content="#fdfdfb">
     <title>{{meta_title}}</title>
+    <script>
+      try {
+        document.documentElement.dataset.theme = localStorage.getItem("somnus-theme") || "system";
+      } catch (error) {
+        document.documentElement.dataset.theme = "system";
+      }
+    </script>
     <link rel="stylesheet" href="{{asset "css/screen.css"}}">
     <script>
       window.MathJax = {
@@ -24,7 +31,7 @@
 
     <script defer src="{{asset "js/mermaid.js"}}"></script>
     <script defer src="{{asset "js/main.js"}}"></script>
-    <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script async src="{{asset "js/mathjax.js"}}"></script>
     {{ghost_foot}}
 </body>
 </html>

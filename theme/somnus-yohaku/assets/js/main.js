@@ -2,11 +2,53 @@
   "use strict";
 
   var root = document.documentElement;
-  var savedTheme = localStorage.getItem("somnus-theme") || "system";
+  var savedTheme = root.dataset.theme || "system";
+
+  try {
+    savedTheme = localStorage.getItem("somnus-theme") || savedTheme;
+  } catch (error) {
+    // Keep the server-provided system theme when storage is unavailable.
+  }
+
+  var boundCommentFrames = new WeakSet();
+
+  function syncCommentFrame(frame) {
+    var paper = getComputedStyle(root).getPropertyValue("--paper").trim();
+    frame.style.backgroundColor = paper;
+    try {
+      var frameDocument = frame.contentDocument;
+      if (!frameDocument || !frameDocument.documentElement || !frameDocument.body) return;
+      // Ghost renders comments into a transparent srcdoc iframe. Set its canvas
+      // explicitly so the browser's default white background cannot show through.
+      frameDocument.documentElement.style.backgroundColor = paper;
+      frameDocument.body.style.backgroundColor = paper;
+    } catch (error) {
+      // Future Ghost versions may use a cross-origin frame; auto mode still works.
+    }
+  }
+
+  function bindCommentFrames() {
+    document.querySelectorAll(".comments-shell iframe").forEach(function (frame) {
+      if (!boundCommentFrames.has(frame)) {
+        boundCommentFrames.add(frame);
+        frame.addEventListener("load", function () { syncCommentFrame(frame); });
+      }
+      syncCommentFrame(frame);
+    });
+  }
 
   function applyTheme(theme) {
+    var systemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var dark = theme === "dark" || (theme === "system" && systemDark);
     root.dataset.theme = theme;
     root.style.colorScheme = theme === "system" ? "light dark" : theme;
+    var themeColor = document.querySelector('meta[name="theme-color"]');
+    if (themeColor) themeColor.content = dark ? "#171817" : "#fdfdfb";
+    document.querySelectorAll(".comments-shell").forEach(function (shell) {
+      // Ghost comments auto mode watches its parent class, not ancestor theme attributes.
+      shell.classList.toggle("comments-dark", dark);
+    });
+    bindCommentFrames();
     document.querySelectorAll("[data-theme-icon]").forEach(function (icon) {
       icon.textContent = theme === "dark" ? "☾" : theme === "light" ? "☀" : "◐";
     });
@@ -17,18 +59,28 @@
 
   applyTheme(savedTheme);
 
+  document.querySelectorAll(".comments-shell").forEach(function (shell) {
+    new MutationObserver(bindCommentFrames).observe(shell, {childList: true, subtree: true});
+  });
+
+  if (window.matchMedia) {
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () {
+      if (root.dataset.theme === "system") applyTheme("system");
+    });
+  }
+
   document.querySelectorAll("[data-theme-toggle]").forEach(function (button) {
     button.addEventListener("click", function () {
       var current = root.dataset.theme || "system";
       var next = current === "system" ? "light" : current === "light" ? "dark" : "system";
-      localStorage.setItem("somnus-theme", next);
+      try { localStorage.setItem("somnus-theme", next); } catch (error) {}
       applyTheme(next);
     });
   });
 
   document.querySelectorAll("[data-set-theme]").forEach(function (button) {
     button.addEventListener("click", function () {
-      localStorage.setItem("somnus-theme", button.dataset.setTheme);
+      try { localStorage.setItem("somnus-theme", button.dataset.setTheme); } catch (error) {}
       applyTheme(button.dataset.setTheme);
     });
   });
@@ -85,52 +137,6 @@
       window.addEventListener("scroll", updateActiveHeading, {passive: true});
     }
   }
-
-  function localizeCommentSignup(frame) {
-    var doc;
-    try {
-      doc = frame.contentDocument;
-    } catch (error) {
-      return;
-    }
-    if (!doc || !doc.body) return;
-    doc.querySelectorAll("p").forEach(function (paragraph) {
-      if (/^成为.+的会员以开始评论。$/.test(paragraph.textContent.trim())) {
-        paragraph.textContent = "注册一个免费账号即可评论，无需付费或订阅。";
-      }
-    });
-    var walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
-    var node;
-    while ((node = walker.nextNode())) {
-      var value = node.nodeValue.trim();
-      if (/^成为.+的会员以开始评论。$/.test(value)) {
-        node.nodeValue = node.nodeValue.replace(value, "注册一个免费账号即可评论，无需付费或订阅。");
-      } else if (value === "立刻注册") {
-        node.nodeValue = node.nodeValue.replace(value, "免费注册");
-      } else if (value === "已经是会员？") {
-        node.nodeValue = node.nodeValue.replace(value, "已有账号？");
-      }
-    }
-  }
-
-  var boundCommentFrames = new WeakSet();
-  function bindCommentFrames() {
-    document.querySelectorAll(".comments-shell iframe").forEach(function (frame) {
-      if (boundCommentFrames.has(frame)) return;
-      boundCommentFrames.add(frame);
-      var applyCommentCopy = function () { localizeCommentSignup(frame); };
-      frame.addEventListener("load", applyCommentCopy);
-      applyCommentCopy();
-      var attempts = 0;
-      var poll = window.setInterval(function () {
-        applyCommentCopy();
-        attempts += 1;
-        if (attempts >= 40) window.clearInterval(poll);
-      }, 500);
-    });
-  }
-  bindCommentFrames();
-  new MutationObserver(bindCommentFrames).observe(document.body, {childList: true, subtree: true});
 
   document.querySelectorAll("[data-copy-url]").forEach(function (button) {
     button.addEventListener("click", function () {

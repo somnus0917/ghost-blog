@@ -8,9 +8,9 @@ import zipfile
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_THEME = ROOT / "ghost" / "theme" / "somnus-yohaku"
-DEFAULT_OUTPUT = ROOT / "ghost" / "build" / "somnus-yohaku.zip"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_THEME = REPO_ROOT / "theme" / "somnus-yohaku"
+DEFAULT_OUTPUT = REPO_ROOT / "build" / "somnus-yohaku.zip"
 EXCLUDED_PARTS = {".DS_Store"}
 EXCLUDED_FILES = {"MapleMono-NF-CN-Regular.woff2"}
 

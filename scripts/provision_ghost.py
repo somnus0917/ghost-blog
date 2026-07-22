@@ -15,9 +15,9 @@ import uuid
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_BUILD = ROOT / "ghost" / "build"
-DEFAULT_CREDENTIALS = ROOT / ".private" / "ghost-owner.json"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_BUILD = REPO_ROOT / "build"
+DEFAULT_CREDENTIALS = REPO_ROOT / ".private" / "ghost-owner.json"
 
 
 class GhostClient:

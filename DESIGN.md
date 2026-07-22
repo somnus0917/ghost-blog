@@ -40,6 +40,9 @@ Adjust those six values in that order to scale the interface without hunting thr
 individual selectors.
 Run `make dev` after saving, then refresh the local page.
 
+MathJax 3.2.2 and its Apache 2.0 license are bundled in `assets/js/`, so formula
+rendering does not depend on a third-party CDN at page load.
+
 ## Local loop
 
 From this repository directory:

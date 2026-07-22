@@ -9,12 +9,13 @@ from collections import defaultdict
 from pathlib import Path
 from urllib.parse import quote
 
-from migrate_zola import CONTENT_ROOT, PAGE_SECTIONS, iter_content, parse_front_matter, yaml_quote
+import migrate_zola as migration
+from migrate_zola import PAGE_SECTIONS, parse_front_matter, yaml_quote
 from provision_ghost import DEFAULT_CREDENTIALS, GhostClient
 
 
-ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_OUTPUT = ROOT / "ghost" / "build" / "redirects.yaml"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_OUTPUT = REPO_ROOT / "build" / "redirects.yaml"
 
 
 def login(client: GhostClient, credentials_path: Path) -> None:
@@ -42,7 +43,14 @@ def main() -> int:
     parser.add_argument("--url", default="http://localhost:2368")
     parser.add_argument("--credentials", type=Path, default=DEFAULT_CREDENTIALS)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument(
+        "--zola-root",
+        type=Path,
+        default=migration.DEFAULT_ZOLA_ROOT,
+        help="Zola project containing content/ (default: repository parent)",
+    )
     args = parser.parse_args()
+    migration.CONTENT_ROOT = args.zola_root.resolve() / "content"
 
     client = GhostClient(args.url)
     login(client, args.credentials)
@@ -53,9 +61,9 @@ def main() -> int:
 
     redirects: list[tuple[str, str]] = []
     failures: list[str] = []
-    for source in iter_content():
+    for source in migration.iter_content():
         metadata, _ = parse_front_matter(source)
-        section = source.relative_to(CONTENT_ROOT).parts[0]
+        section = source.relative_to(migration.CONTENT_ROOT).parts[0]
         resource = "pages" if section in PAGE_SECTIONS else "posts"
         title = str(metadata.get("title") or source.stem)
         matches = remote[resource].get(title, [])

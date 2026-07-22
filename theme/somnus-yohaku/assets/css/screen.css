@@ -7,17 +7,17 @@
 }
 
 :root {
-  --paper: #fbfaf7;
-  --paper-raised: #fffefa;
-  --paper-soft: #f7f3ed;
-  --paper-pink: #faf1f0;
-  --ink: #292824;
-  --ink-soft: #68645d;
-  --ink-faint: #aaa49a;
-  --line: rgba(48, 44, 37, 0.1);
-  --line-strong: rgba(48, 44, 37, 0.18);
-  --accent: #b06e5e;
-  --accent-soft: #e9d3cc;
+  --paper: #fdfdfb;
+  --paper-raised: #ffffff;
+  --paper-soft: #f7f7f3;
+  --paper-pink: #fbf6f5;
+  --ink: #282825;
+  --ink-soft: #6c6b65;
+  --ink-faint: #a8a69e;
+  --line: rgba(40, 48, 54, 0.095);
+  --line-strong: rgba(40, 48, 54, 0.17);
+  --accent: #cf6d78;
+  --accent-soft: #f5dfe2;
   --shadow: 0 10px 34px rgba(55, 45, 34, 0.06), 0 1px 3px rgba(55, 45, 34, 0.08);
   --sans: "LXGW WenKai Web", "LXGW WenKai", "霞鹜文楷", ui-sans-serif, system-ui, sans-serif;
   --serif: "LXGW WenKai Web", "LXGW WenKai", "霞鹜文楷", "Songti SC", STSong, serif;
@@ -33,7 +33,7 @@
   --article: min(800px, calc(100vw - 48px));
 }
 
-[data-theme="dark"] {
+:root[data-theme="dark"] {
   --paper: #171817;
   --paper-raised: #1d1e1d;
   --paper-soft: #232321;
@@ -49,7 +49,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  [data-theme="system"] {
+  :root[data-theme="system"] {
     --paper: #171817;
     --paper-raised: #1d1e1d;
     --paper-soft: #232321;
@@ -943,6 +943,19 @@ video {
 .comments-shell {
   width: var(--article);
   margin: 0 auto 190px;
+  color: var(--ink);
+}
+
+.comments-shell iframe {
+  background: var(--paper);
+}
+
+.comments-note {
+  width: var(--article);
+  margin: 0 auto 20px;
+  color: var(--ink-soft);
+  font-size: var(--type-small);
+  text-align: center;
 }
 
 .page-shell .article-header {
@@ -1393,17 +1406,6 @@ video {
 
 /* Product-editorial pass inspired by Mix Space's Shiro/Yohaku language. */
 :root {
-  --paper: #fdfdfb;
-  --paper-raised: #ffffff;
-  --paper-soft: #f7f7f3;
-  --paper-pink: #fbf6f5;
-  --ink: #282825;
-  --ink-soft: #6c6b65;
-  --ink-faint: #a8a69e;
-  --line: rgba(40, 48, 54, 0.095);
-  --line-strong: rgba(40, 48, 54, 0.17);
-  --accent: #cf6d78;
-  --accent-soft: #f5dfe2;
   --page: min(1080px, calc(100vw - 96px));
   --article: min(800px, calc(100vw - 48px));
 }
