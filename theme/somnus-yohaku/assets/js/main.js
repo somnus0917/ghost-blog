@@ -11,9 +11,51 @@
   }
 
   var boundCommentFrames = new WeakSet();
+  var commentFrameStyles = [
+    '[data-testid="cta-box"] {',
+    '  flex-direction: row !important;',
+    '  align-items: center !important;',
+    '  justify-content: flex-start !important;',
+    '  gap: 12px !important;',
+    '  padding: 10px 0 18px !important;',
+    '}',
+    '[data-testid="cta-box"] > h1,',
+    '[data-testid="cta-box"] > p:first-of-type {',
+    '  display: none !important;',
+    '}',
+    '[data-testid="signup-button"] {',
+    '  margin: 0 !important;',
+    '  padding: 10px 15px !important;',
+    '  border-radius: 4px !important;',
+    '  background: var(--somnus-comment-accent) !important;',
+    '  font-size: 13px !important;',
+    '}',
+    '[data-testid="cta-box"] > p:last-of-type {',
+    '  margin: 0 !important;',
+    '  color: var(--somnus-comment-muted) !important;',
+    '  font-size: 13px !important;',
+    '  text-align: left !important;',
+    '}',
+    '[data-testid="cta-box"] > p:last-of-type span {',
+    '  font-size: inherit !important;',
+    '}',
+    '[data-testid="signin-button"] {',
+    '  color: var(--somnus-comment-accent) !important;',
+    '  font-size: inherit !important;',
+    '}',
+    '@media (max-width: 479px) {',
+    '  [data-testid="cta-box"] {',
+    '    flex-wrap: wrap !important;',
+    '    gap: 8px 12px !important;',
+    '    padding-bottom: 14px !important;',
+    '  }',
+    '}'
+  ].join("\n");
 
   function syncCommentFrame(frame) {
     var paper = getComputedStyle(root).getPropertyValue("--paper").trim();
+    var accent = getComputedStyle(root).getPropertyValue("--accent").trim();
+    var muted = getComputedStyle(root).getPropertyValue("--ink-soft").trim();
     frame.style.backgroundColor = paper;
     try {
       var frameDocument = frame.contentDocument;
@@ -21,7 +63,15 @@
       // Ghost renders comments into a transparent srcdoc iframe. Set its canvas
       // explicitly so the browser's default white background cannot show through.
       frameDocument.documentElement.style.backgroundColor = paper;
+      frameDocument.documentElement.style.setProperty("--somnus-comment-accent", accent);
+      frameDocument.documentElement.style.setProperty("--somnus-comment-muted", muted);
       frameDocument.body.style.backgroundColor = paper;
+      if (frameDocument.head && !frameDocument.getElementById("somnus-comment-styles")) {
+        var style = frameDocument.createElement("style");
+        style.id = "somnus-comment-styles";
+        style.textContent = commentFrameStyles;
+        frameDocument.head.appendChild(style);
+      }
     } catch (error) {
       // Future Ghost versions may use a cross-origin frame; auto mode still works.
     }

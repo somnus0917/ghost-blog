@@ -942,7 +942,7 @@ video {
 
 .comments-shell {
   width: var(--article);
-  margin: 0 auto 190px;
+  margin: 0 auto 150px;
   color: var(--ink);
 }
 
@@ -950,12 +950,29 @@ video {
   background: var(--paper);
 }
 
+.comments-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 4px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.comments-header h2 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
 .comments-note {
-  width: var(--article);
-  margin: 0 auto 20px;
+  margin: 0;
   color: var(--ink-soft);
   font-size: var(--type-small);
-  text-align: center;
+  white-space: nowrap;
 }
 
 .page-shell .article-header {
@@ -1275,7 +1292,15 @@ video {
   }
 
   .comments-shell {
-    margin-bottom: 120px;
+    margin-bottom: 100px;
+  }
+
+  .comments-header {
+    gap: 16px;
+  }
+
+  .comments-header h2 {
+    font-size: 17px;
   }
 }
 
