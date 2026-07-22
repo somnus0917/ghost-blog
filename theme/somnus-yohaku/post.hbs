@@ -42,8 +42,11 @@
     </footer>
 </article>
 
-<section class="comments-shell" id="comments">
-    <p class="comments-note">免费注册或登录后即可参与讨论，无需付费订阅。</p>
-    {{comments title="讨论与留言" count=false mode="auto"}}
+<section class="comments-shell" id="comments" aria-labelledby="comments-title">
+    <header class="comments-header">
+        <h2 id="comments-title">评论</h2>
+        <p class="comments-note">注册或登录后即可评论。</p>
+    </header>
+    {{comments title="" count=false mode="auto"}}
 </section>
 {{/post}}
