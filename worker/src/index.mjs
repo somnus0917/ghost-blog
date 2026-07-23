@@ -1,5 +1,7 @@
 const POST_UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const VISITOR_PATTERN = /^[a-zA-Z0-9_-]{16,128}$/;
+const EMAIL_TYPE_PATTERN = /^(signin|signup|subscribe)$/;
+const MEMBERS_MAGIC_LINK_PATH = /^\/members\/api\/send-magic-link\/?$/;
 const PRESENCE_TTL_SECONDS = 45;
 
 function json(data, status = 200, extraHeaders = {}) {
@@ -34,10 +36,83 @@ export function formatTinybirdUrl(apiUrl, pipe, parameters) {
   return url;
 }
 
-async function readBody(request) {
+async function readBody(request, maximumBytes = 2048) {
   const contentLength = Number(request.headers.get("content-length") || 0);
-  if (contentLength > 2048) throw new Error("request body is too large");
+  if (contentLength > maximumBytes) throw new Error("request body is too large");
   return request.json();
+}
+
+export function isMembersMagicLinkPath(pathname) {
+  return MEMBERS_MAGIC_LINK_PATH.test(pathname);
+}
+
+export function requiresTurnstile(emailType) {
+  return emailType === "signup" || emailType === "subscribe";
+}
+
+async function verifyTurnstile(request, env, token) {
+  if (!env.TURNSTILE_SECRET || typeof token !== "string" || token.length < 10 || token.length > 2048) {
+    return false;
+  }
+  const body = new URLSearchParams({
+    secret: env.TURNSTILE_SECRET,
+    response: token
+  });
+  const remoteIp = request.headers.get("x-somnus-client-ip");
+  if (remoteIp) body.set("remoteip", remoteIp);
+
+  const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+    method: "POST",
+    headers: {"content-type": "application/x-www-form-urlencoded"},
+    body
+  });
+  if (!response.ok) return false;
+  const result = await response.json();
+  return result.success === true
+    && result.hostname === (env.TURNSTILE_HOSTNAME || "blog.somnus.wiki")
+    && result.action === (env.TURNSTILE_ACTION || "member-signup");
+}
+
+async function forwardMagicLink(request, env) {
+  let body;
+  try {
+    body = await readBody(request, 8192);
+  } catch (_error) {
+    return json({errors: [{message: "Invalid registration request."}]}, 400);
+  }
+
+  if (!body || typeof body.email !== "string" || !EMAIL_TYPE_PATTERN.test(body.emailType || "")) {
+    return json({errors: [{message: "Invalid registration request."}]}, 400);
+  }
+  if (!env.GHOST_MEMBERS_PROXY_URL || !env.MEMBERS_PROXY_SECRET) {
+    console.error("Ghost members proxy is not configured");
+    return json({errors: [{message: "Registration is temporarily unavailable."}]}, 503);
+  }
+
+  if (requiresTurnstile(body.emailType)) {
+    const valid = await verifyTurnstile(request, env, body.turnstileToken);
+    if (!valid) {
+      return json({errors: [{message: "Human verification failed. Please try again."}]}, 403);
+    }
+  }
+
+  delete body.turnstileToken;
+  const response = await fetch(env.GHOST_MEMBERS_PROXY_URL, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-somnus-members-proxy": env.MEMBERS_PROXY_SECRET,
+      "user-agent": "somnus-blog-members-proxy/1.0"
+    },
+    body: JSON.stringify(body),
+    redirect: "manual"
+  });
+  const headers = new Headers({
+    "cache-control": "no-store",
+    "content-type": response.headers.get("content-type") || "application/json; charset=utf-8",
+    "x-content-type-options": "nosniff"
+  });
+  return new Response(response.body, {status: response.status, headers});
 }
 
 async function hashVisitor(visitor, salt) {
@@ -139,7 +214,13 @@ async function handleRequest(request, env) {
     return new Response(null, {status: 204, headers: {"access-control-allow-origin": allowedOrigin, "access-control-allow-methods": "GET, POST, OPTIONS", "access-control-allow-headers": "content-type, x-like-visitor"}});
   }
 
-  const route = parseRoute(new URL(request.url).pathname);
+  const pathname = new URL(request.url).pathname;
+  if (isMembersMagicLinkPath(pathname)) {
+    if (request.method !== "POST") return json({error: "method not allowed"}, 405, {allow: "POST"});
+    return forwardMagicLink(request, env);
+  }
+
+  const route = parseRoute(pathname);
   if (!route) return json({error: "not found"}, 404);
 
   try {

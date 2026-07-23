@@ -12,6 +12,9 @@ routes = [
 ALLOWED_ORIGIN = "https://blog.somnus.wiki"
 TINYBIRD_API_URL = "https://api.ap-east-1.aws.tinybird.co"
 TINYBIRD_SITE_UUID = "c7e5aff3-9c89-4749-9506-f7a99c9ea550"
+GHOST_MEMBERS_PROXY_URL = "https://blog.somnus.wiki/members/api/_origin/send-magic-link/"
+TURNSTILE_HOSTNAME = "blog.somnus.wiki"
+TURNSTILE_ACTION = "member-signup"
 
 [[d1_databases]]
 binding = "DB"

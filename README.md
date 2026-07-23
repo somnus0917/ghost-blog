@@ -34,6 +34,24 @@ The theme self-hosts LXGW WenKai in WOFF2 format. The upstream OFL license is
 included in `shared/fonts/OFL.txt`. The font is installed once into Ghost's persistent
 `content/images/fonts/` directory, keeping routine theme deployments small and fast.
 
+## Turnstile-protected member signup
+
+The `/signup/` route uses Cloudflare Turnstile before Ghost sends a membership
+magic link. The public site key lives in `theme/somnus-yohaku/signup.hbs`.
+The private Turnstile key and the private Caddy-to-Worker forwarding key are
+stored only as runtime secrets:
+
+```bash
+cd worker
+npx wrangler secret put TURNSTILE_SECRET
+npx wrangler secret put MEMBERS_PROXY_SECRET
+```
+
+`MEMBERS_PROXY_SECRET` must contain the same random value in the Caddy
+container environment. Caddy intercepts `/members/api/send-magic-link/` so
+signup and subscribe requests cannot bypass Turnstile. Existing-member sign-in
+still uses Ghost's normal passwordless flow. Never commit either secret.
+
 ## GitHub Actions deployment
 
 `.github/workflows/theme-cicd.yml` validates pull requests. Theme changes pushed to

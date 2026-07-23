@@ -72,6 +72,16 @@
         style.textContent = commentFrameStyles;
         frameDocument.head.appendChild(style);
       }
+      if (!frameDocument.documentElement.dataset.somnusSignupBound) {
+        frameDocument.documentElement.dataset.somnusSignupBound = "true";
+        frameDocument.addEventListener("click", function (event) {
+          var signupButton = event.target.closest && event.target.closest('[data-testid="signup-button"]');
+          if (!signupButton) return;
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          window.location.assign("/signup/");
+        }, true);
+      }
     } catch (error) {
       // Future Ghost versions may use a cross-origin frame; auto mode still works.
     }
@@ -105,6 +115,7 @@
     document.querySelectorAll("[data-set-theme]").forEach(function (button) {
       button.classList.toggle("is-active", button.dataset.setTheme === theme);
     });
+    if (window.somnusRenderTurnstile) window.somnusRenderTurnstile();
   }
 
   applyTheme(savedTheme);
@@ -134,6 +145,14 @@
       applyTheme(button.dataset.setTheme);
     });
   });
+
+  document.addEventListener("click", function (event) {
+    var signupLink = event.target.closest && event.target.closest('[data-portal="signup"], a[href="#/portal/signup"]');
+    if (!signupLink) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    window.location.assign("/signup/");
+  }, true);
 
   var menuButton = document.querySelector("[data-menu-toggle]");
   var menu = document.querySelector("[data-menu]");
@@ -197,6 +216,109 @@
       });
     });
   });
+
+  var signupForm = document.querySelector("[data-turnstile-signup]");
+  if (signupForm) {
+    var signupEmail = signupForm.querySelector('input[name="email"]');
+    var signupButton = signupForm.querySelector("[data-signup-submit]");
+    var signupFeedback = signupForm.querySelector("[data-signup-feedback]");
+    var signupWidget = signupForm.querySelector("[data-turnstile-widget]");
+    var signupWidgetId = null;
+    var signupWidgetTimer = null;
+
+    function renderSignupTurnstile(attempt) {
+      window.clearTimeout(signupWidgetTimer);
+      if (!window.turnstile) {
+        if ((attempt || 0) < 50) {
+          signupWidgetTimer = window.setTimeout(function () {
+            renderSignupTurnstile((attempt || 0) + 1);
+          }, 100);
+        }
+        return;
+      }
+      if (signupWidgetId !== null) {
+        try { window.turnstile.remove(signupWidgetId); } catch (error) {}
+        signupWidgetId = null;
+      }
+      signupWidget.innerHTML = "";
+      var systemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      var currentTheme = root.dataset.theme || "system";
+      var dark = currentTheme === "dark" || (currentTheme === "system" && systemDark);
+      signupWidgetId = window.turnstile.render(signupWidget, {
+        sitekey: signupWidget.dataset.sitekey,
+        action: "member-signup",
+        theme: dark ? "dark" : "light",
+        language: "zh-cn",
+        size: "flexible"
+      });
+    }
+
+    window.somnusRenderTurnstile = function () {
+      renderSignupTurnstile(0);
+    };
+    renderSignupTurnstile(0);
+
+    function setSignupState(state, message) {
+      signupForm.dataset.state = state;
+      signupButton.disabled = state === "loading" || state === "success";
+      signupEmail.disabled = state === "loading" || state === "success";
+      signupFeedback.textContent = message || "";
+    }
+
+    signupForm.addEventListener("submit", function (event) {
+      event.preventDefault();
+      signupEmail.value = signupEmail.value.trim();
+      if (!signupEmail.checkValidity()) {
+        signupEmail.reportValidity();
+        setSignupState("error", "请输入有效的邮箱地址。");
+        return;
+      }
+
+      var turnstileToken = window.turnstile && signupWidgetId !== null
+        ? window.turnstile.getResponse(signupWidgetId)
+        : "";
+      if (!turnstileToken) {
+        setSignupState("error", "请先完成人机验证。");
+        return;
+      }
+
+      setSignupState("loading", "正在发送，请稍候…");
+      fetch("/members/api/integrity-token/", {
+        method: "GET",
+        credentials: "same-origin",
+        headers: {"accept": "text/plain"}
+      }).then(function (response) {
+        if (!response.ok) throw new Error("integrity token unavailable");
+        return response.text();
+      }).then(function (integrityToken) {
+        return fetch("/members/api/send-magic-link/", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {"content-type": "application/json"},
+          body: JSON.stringify({
+            email: signupEmail.value,
+            emailType: "signup",
+            autoRedirect: true,
+            integrityToken: integrityToken,
+            turnstileToken: turnstileToken
+          })
+        });
+      }).then(function (response) {
+        if (response.ok) return;
+        return response.json().catch(function () { return {}; }).then(function (payload) {
+          var error = payload && payload.errors && payload.errors[0];
+          throw new Error(error && error.message ? error.message : "signup failed");
+        });
+      }).then(function () {
+        signupEmail.value = "";
+        setSignupState("success", "注册邮件已发送，请打开邮箱完成验证。");
+      }).catch(function (error) {
+        var tooMany = /too many|rate|频繁/i.test(error.message);
+        setSignupState("error", tooMany ? "请求过于频繁，请稍后再试。" : "发送失败，请刷新页面后重试。");
+        if (window.turnstile && signupWidgetId !== null) window.turnstile.reset(signupWidgetId);
+      });
+    });
+  }
 
   var engagement = document.querySelector("[data-post-engagement]");
   if (engagement) {

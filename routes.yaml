@@ -5,6 +5,9 @@ routes:
   /about/:
     template: about
 
+  /signup/:
+    template: signup
+
   /privacy/ripfullpage/:
     template: privacy-ripfullpage
 

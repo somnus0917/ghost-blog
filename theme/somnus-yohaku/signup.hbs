@@ -1,0 +1,41 @@
+{{!< default}}
+
+<article class="article-shell signup-page">
+    <header class="article-header">
+        <p class="article-eyebrow">MEMBERSHIP</p>
+        <h1>加入本站</h1>
+        <p class="page-excerpt">免费注册，使用邮箱中的安全链接完成验证。</p>
+    </header>
+
+    {{#if @member}}
+        <section class="signup-card signup-card-member">
+            <p>你已经登录。</p>
+            <a href="#/portal/account" data-portal="account">查看账户</a>
+        </section>
+    {{else}}
+        <form class="signup-card" data-turnstile-signup novalidate>
+            <label for="signup-email">邮箱地址</label>
+            <input
+                id="signup-email"
+                name="email"
+                type="email"
+                inputmode="email"
+                autocomplete="email"
+                placeholder="you@example.com"
+                required
+            >
+
+            <div
+                class="signup-turnstile"
+                data-turnstile-widget
+                data-sitekey="0x4AAAAAAD7wz6nT2dj1YWuD"
+            ></div>
+
+            <button type="submit" data-signup-submit>发送注册邮件</button>
+            <p class="signup-feedback" data-signup-feedback role="status" aria-live="polite"></p>
+            <p class="signup-signin">已经注册？<a href="#/portal/signin" data-portal="signin">登录</a></p>
+        </form>
+    {{/if}}
+</article>
+
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>

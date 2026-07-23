@@ -1,6 +1,29 @@
 blog.somnus.wiki {
     encode zstd gzip
 
+    @members_origin {
+        path /members/api/_origin/send-magic-link /members/api/_origin/send-magic-link/
+        header X-Somnus-Members-Proxy {$MEMBERS_PROXY_SECRET}
+    }
+
+    handle @members_origin {
+        rewrite * /members/api/send-magic-link/
+        reverse_proxy somnus-ghost:2368 {
+            header_up -X-Somnus-Members-Proxy
+        }
+    }
+
+    handle /members/api/_origin/send-magic-link* {
+        respond 404
+    }
+
+    handle /members/api/send-magic-link* {
+        reverse_proxy https://engagement.somnus.wiki {
+            header_up Host engagement.somnus.wiki
+            header_up X-Somnus-Client-IP {remote_host}
+        }
+    }
+
     handle_path /.ghost/analytics/* {
         reverse_proxy somnus-traffic-analytics:3000
     }

@@ -24,7 +24,7 @@ services:
       database__pool__min: 0
       database__pool__max: 5
       privacy__useUpdateCheck: "false"
-      security__staffDeviceVerification: "false"
+      security__staffDeviceVerification: "true"
       tinybird__tracker__endpoint: ${GHOST_URL}/.ghost/analytics/api/v1/page_hit
       tinybird__adminToken: ${TINYBIRD_ADMIN_TOKEN:-}
       tinybird__workspaceId: ${TINYBIRD_WORKSPACE_ID:-}
