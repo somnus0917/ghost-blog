@@ -1,5 +1,5 @@
 name = "somnus-blog-engagement"
-account_id = "replace-with-cloudflare-account-id"
+account_id = "b4749c86984f7a88f573e4e307834846"
 main = "src/index.mjs"
 compatibility_date = "2026-07-22"
 workers_dev = false
@@ -20,8 +20,11 @@ TURNSTILE_ACTION = "member-signup"
 [[d1_databases]]
 binding = "DB"
 database_name = "somnus-blog-engagement"
-database_id = "replace-after-running-wrangler-d1-create"
+database_id = "7c1d2a36-80b8-4f25-9c66-a424d15f73ab"
 migrations_dir = "migrations"
+
+[triggers]
+crons = ["*/10 * * * *"]
 
 [[ratelimits]]
 name = "ENGAGEMENT_RATE_LIMITER"
@@ -38,6 +41,3 @@ namespace_id = "91018"
   [ratelimits.simple]
   limit = 5
   period = 60
-
-[triggers]
-crons = ["*/10 * * * *"]

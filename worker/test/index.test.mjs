@@ -15,6 +15,7 @@ import {
 const postUuid = "6c3dfb40-8b72-49f2-bf50-735885f0b76b";
 const proxySecret = "test-worker-proxy-secret-32-chars";
 const visitorSalt = "test-visitor-hash-salt-32-characters";
+const visitorCookieSecret = "test-visitor-cookie-secret-32-characters";
 
 function proxyHeaders(extra = {}) {
   return {
@@ -144,6 +145,7 @@ test("rate-limits repeated signup requests before forwarding", async () => {
     GHOST_MEMBERS_PROXY_URL: "https://blog.somnus.wiki/members/api/_origin/send-magic-link/",
     MEMBERS_PROXY_SECRET: "test-proxy-secret",
     VISITOR_HASH_SALT: visitorSalt,
+    VISITOR_COOKIE_SECRET: visitorCookieSecret,
     SIGNUP_RATE_LIMITER: {limit: async () => ({success: false})}
   });
   assert.equal(response.status, 429);
@@ -166,6 +168,7 @@ test("rejects signup requests without a Turnstile token", async () => {
     ALLOWED_ORIGIN: "https://blog.somnus.wiki",
     WORKER_PROXY_SECRET: proxySecret,
     VISITOR_HASH_SALT: visitorSalt,
+    VISITOR_COOKIE_SECRET: visitorCookieSecret,
     GHOST_MEMBERS_PROXY_URL: "https://blog.somnus.wiki/members/api/_origin/send-magic-link/",
     MEMBERS_PROXY_SECRET: "test-proxy-secret",
     SIGNUP_RATE_LIMITER: {limit: async () => ({success: true})}
@@ -180,7 +183,8 @@ test("rejects direct requests that bypass Caddy", async () => {
     {
       ALLOWED_ORIGIN: "https://blog.somnus.wiki",
       WORKER_PROXY_SECRET: proxySecret,
-      VISITOR_HASH_SALT: visitorSalt
+      VISITOR_HASH_SALT: visitorSalt,
+      VISITOR_COOKIE_SECRET: visitorCookieSecret
     }
   );
   assert.equal(response.status, 403);
@@ -192,6 +196,7 @@ test("issues and then accepts a signed HttpOnly visitor cookie", async () => {
     ALLOWED_ORIGIN: "https://blog.somnus.wiki",
     WORKER_PROXY_SECRET: proxySecret,
     VISITOR_HASH_SALT: visitorSalt,
+    VISITOR_COOKIE_SECRET: visitorCookieSecret,
     DB: createD1Stub()
   };
   const firstResponse = await worker.fetch(
@@ -204,7 +209,8 @@ test("issues and then accepts a signed HttpOnly visitor cookie", async () => {
   assert.equal(firstResponse.headers.get("cache-control"), "no-store");
   assert.equal(firstResponse.headers.get("x-content-type-options"), "nosniff");
   const cookie = firstResponse.headers.get("set-cookie");
-  assert.match(cookie, /^__Host-somnus_visitor=legacy_like_visitor_12345\./);
+  assert.match(cookie, /^__Host-somnus_visitor=[0-9a-f]{32}\./);
+  assert.doesNotMatch(cookie, /legacy_like_visitor_12345/);
   assert.match(cookie, /HttpOnly/);
   assert.match(cookie, /Secure/);
   assert.match(cookie, /SameSite=Lax/);
@@ -231,6 +237,7 @@ test("rejects an invalid engagement method without issuing a visitor cookie", as
       ALLOWED_ORIGIN: "https://blog.somnus.wiki",
       WORKER_PROXY_SECRET: proxySecret,
       VISITOR_HASH_SALT: visitorSalt,
+      VISITOR_COOKIE_SECRET: visitorCookieSecret,
       DB: createD1Stub()
     }
   );
@@ -251,6 +258,7 @@ test("rate-limits likes by signed visitor and trusted client IP", async () => {
       ALLOWED_ORIGIN: "https://blog.somnus.wiki",
       WORKER_PROXY_SECRET: proxySecret,
       VISITOR_HASH_SALT: visitorSalt,
+      VISITOR_COOKIE_SECRET: visitorCookieSecret,
       DB: createD1Stub(),
       ENGAGEMENT_RATE_LIMITER: {
         async limit({key}) {
@@ -278,6 +286,7 @@ test("rejects a chunked JSON body larger than the configured limit", async () =>
       ALLOWED_ORIGIN: "https://blog.somnus.wiki",
       WORKER_PROXY_SECRET: proxySecret,
       VISITOR_HASH_SALT: visitorSalt,
+      VISITOR_COOKIE_SECRET: visitorCookieSecret,
       DB: createD1Stub()
     }
   );
@@ -292,4 +301,21 @@ test("scheduled cleanup is bounded and uses the last_seen predicate", async () =
   assert.match(statements[0].sql, /last_seen < \?/);
   assert.match(statements[0].sql, /LIMIT \?/);
   assert.equal(statements[0].values[1], 5000);
+});
+
+test("exposes the engagement protocol version through the trusted proxy", async () => {
+  const response = await worker.fetch(
+    new Request("https://engagement.somnus.wiki/api/engagement/health", {
+      headers: proxyHeaders()
+    }),
+    {
+      ALLOWED_ORIGIN: "https://blog.somnus.wiki",
+      WORKER_PROXY_SECRET: proxySecret,
+      VISITOR_HASH_SALT: visitorSalt,
+      VISITOR_COOKIE_SECRET: visitorCookieSecret
+    }
+  );
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("x-somnus-worker-version"), "3");
+  assert.deepEqual(await response.json(), {status: "ok", apiVersion: "3"});
 });

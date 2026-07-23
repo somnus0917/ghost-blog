@@ -1,7 +1,9 @@
 const POST_UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EMAIL_TYPE_PATTERN = /^(signin|signup|subscribe)$/;
 const MEMBERS_MAGIC_LINK_PATH = /^\/members\/api\/send-magic-link\/?$/;
-const PRESENCE_TTL_SECONDS = 45;
+const ENGAGEMENT_API_VERSION = "3";
+const ENGAGEMENT_HEALTH_PATH = "/api/engagement/health";
+const PRESENCE_TTL_SECONDS = 75;
 const PRESENCE_CLEANUP_BATCH_SIZE = 5000;
 const VISITOR_COOKIE_NAME = "__Host-somnus_visitor";
 const VISITOR_ID_PATTERN = /^[a-zA-Z0-9_-]{16,128}$/;
@@ -253,6 +255,9 @@ async function resolveVisitor(request, env) {
   if (typeof env.VISITOR_HASH_SALT !== "string" || env.VISITOR_HASH_SALT.length < 32) {
     throw new Error("VISITOR_HASH_SALT must be a random secret of at least 32 characters");
   }
+  if (typeof env.VISITOR_COOKIE_SECRET !== "string" || env.VISITOR_COOKIE_SECRET.length < 32) {
+    throw new Error("VISITOR_COOKIE_SECRET must be a random secret of at least 32 characters");
+  }
 
   const value = readCookie(request, VISITOR_COOKIE_NAME);
   const [candidateId, candidateSignature, ...extra] = value.split(".");
@@ -261,7 +266,7 @@ async function resolveVisitor(request, env) {
     && VISITOR_ID_PATTERN.test(candidateId || "")
     && VISITOR_SIGNATURE_PATTERN.test(candidateSignature || "")
   ) {
-    const expectedSignature = await signVisitorId(candidateId, env.VISITOR_HASH_SALT);
+    const expectedSignature = await signVisitorId(candidateId, env.VISITOR_COOKIE_SECRET);
     if (constantTimeEqual(candidateSignature, expectedSignature)) {
       return {
         hash: await hashValue(candidateId, env.VISITOR_HASH_SALT),
@@ -270,11 +275,8 @@ async function resolveVisitor(request, env) {
     }
   }
 
-  const legacyVisitorId = request.headers.get("x-like-visitor") || "";
-  const visitorId = VISITOR_ID_PATTERN.test(legacyVisitorId)
-    ? legacyVisitorId
-    : randomVisitorId();
-  const signature = await signVisitorId(visitorId, env.VISITOR_HASH_SALT);
+  const visitorId = randomVisitorId();
+  const signature = await signVisitorId(visitorId, env.VISITOR_COOKIE_SECRET);
   return {
     hash: await hashValue(visitorId, env.VISITOR_HASH_SALT),
     setCookie: `${VISITOR_COOKIE_NAME}=${visitorId}.${signature}; Path=/; Max-Age=31536000; HttpOnly; Secure; SameSite=Lax`
@@ -403,6 +405,10 @@ async function handleRequest(request, env) {
     console.error("VISITOR_HASH_SALT must be a random secret of at least 32 characters");
     return json({error: "service unavailable"}, 503);
   }
+  if (typeof env.VISITOR_COOKIE_SECRET !== "string" || env.VISITOR_COOKIE_SECRET.length < 32) {
+    console.error("VISITOR_COOKIE_SECRET must be a random secret of at least 32 characters");
+    return json({error: "service unavailable"}, 503);
+  }
   if (!hasValidProxySecret(request, env.WORKER_PROXY_SECRET)) {
     return json({error: "proxy authentication required"}, 403);
   }
@@ -410,10 +416,18 @@ async function handleRequest(request, env) {
   const allowedOrigin = env.ALLOWED_ORIGIN || "https://blog.somnus.wiki";
   if (!isAllowedOrigin(request, allowedOrigin)) return json({error: "origin not allowed"}, 403);
   if (request.method === "OPTIONS") {
-    return new Response(null, {status: 204, headers: {"access-control-allow-origin": allowedOrigin, "access-control-allow-methods": "GET, POST, OPTIONS", "access-control-allow-headers": "content-type, x-like-visitor"}});
+    return new Response(null, {status: 204, headers: {"access-control-allow-origin": allowedOrigin, "access-control-allow-methods": "GET, POST, OPTIONS", "access-control-allow-headers": "content-type"}});
   }
 
   const pathname = new URL(request.url).pathname;
+  if (pathname === ENGAGEMENT_HEALTH_PATH) {
+    if (request.method !== "GET") return json({error: "method not allowed"}, 405, {allow: "GET"});
+    return json(
+      {status: "ok", apiVersion: ENGAGEMENT_API_VERSION},
+      200,
+      {"x-somnus-worker-version": ENGAGEMENT_API_VERSION}
+    );
+  }
   if (isMembersMagicLinkPath(pathname)) {
     if (request.method !== "POST") return json({error: "method not allowed"}, 405, {allow: "POST"});
     return forwardMagicLink(request, env);
