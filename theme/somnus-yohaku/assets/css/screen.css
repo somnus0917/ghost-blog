@@ -189,6 +189,10 @@ mjx-container[jax="SVG"]:not([display="true"]) > svg {
   background: var(--paper-soft);
 }
 
+.mobile-nav-actions {
+  display: none;
+}
+
 .nav-home {
   gap: 5px;
   color: var(--ink) !important;
@@ -374,12 +378,8 @@ mjx-container[jax="SVG"]:not([display="true"]) > svg {
 }
 
 .post-row-link {
-  min-height: 78px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 40px;
   align-items: center;
-  padding: 16px 0;
   transition: padding 160ms ease, color 160ms ease;
 }
 
@@ -462,16 +462,9 @@ mjx-container[jax="SVG"]:not([display="true"]) > svg {
 }
 
 .season-panel {
-  width: min(1300px, calc(100vw - 36px));
-  min-height: 330px;
   display: grid;
-  grid-template-columns: 1fr 1.6fr 0.7fr;
-  gap: 52px;
   align-items: start;
-  margin: 100px auto 220px;
-  padding: 52px;
   border-radius: 7px;
-  background: var(--paper-soft);
 }
 
 .season-label {
@@ -1263,7 +1256,7 @@ mjx-container[jax="SVG"]:not([display="true"]) > svg {
   }
 
   .floating-nav.is-open {
-    max-height: 240px;
+    max-height: 300px;
     padding: 8px;
     border: 1px solid var(--line);
     opacity: 1;
@@ -1271,6 +1264,30 @@ mjx-container[jax="SVG"]:not([display="true"]) > svg {
 
   .floating-nav a {
     justify-content: center;
+  }
+
+  .mobile-nav-actions {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2px;
+    padding-top: 4px;
+    border-top: 1px solid var(--line);
+  }
+
+  .mobile-nav-actions button {
+    min-height: 38px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--ink-soft);
+    font: 600 13px/1 var(--sans);
+  }
+
+  .mobile-nav-actions button:hover,
+  .mobile-nav-actions button:focus-visible {
+    background: var(--paper-soft);
+    color: var(--ink);
   }
 
   .nav-home {

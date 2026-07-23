@@ -52,7 +52,7 @@
                 {{#foreach notes}}
                     <a class="stream-item" href="{{url}}">
                         <span>{{date format="MM / DD"}}</span>
-                        <div><h2>{{title}}</h2><p>{{excerpt words="22"}}</p></div>
+                        <div><h2>{{title}}</h2><p data-character-excerpt="80">{{excerpt characters="80"}}</p></div>
                     </a>
                 {{/foreach}}
             </div>
@@ -68,7 +68,7 @@
                 {{#foreach days}}
                     <a class="stream-item" href="{{url}}">
                         <span>{{date format="MM / DD"}}</span>
-                        <div><h2>{{title}}</h2><p>{{excerpt words="22"}}</p></div>
+                        <div><h2>{{title}}</h2><p data-character-excerpt="80">{{excerpt characters="80"}}</p></div>
                     </a>
                 {{/foreach}}
             </div>

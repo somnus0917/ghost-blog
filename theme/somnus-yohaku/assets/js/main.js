@@ -12,6 +12,14 @@
     // Keep the server-provided system theme when storage is unavailable.
   }
 
+  document.querySelectorAll("[data-character-excerpt]").forEach(function (excerpt) {
+    var maximumCharacters = Number(excerpt.dataset.characterExcerpt) || 80;
+    var normalizedText = excerpt.textContent.trim().replace(/\s+/g, " ");
+    var characters = Array.from(normalizedText);
+    if (characters.length <= maximumCharacters) return;
+    excerpt.textContent = characters.slice(0, maximumCharacters).join("").trimEnd() + "…";
+  });
+
   function loadScriptOnce(id, source) {
     if (!source) return Promise.reject(new Error("Missing script source for " + id));
     var existing = document.getElementById(id);
@@ -85,11 +93,13 @@
   }
 
   var searchPromise;
+  var searchReady = false;
 
   function loadSearch() {
     if (searchPromise) return searchPromise;
     var existing = document.querySelector("script[data-sodo-search]");
     if (existing) {
+      searchReady = existing.dataset.loaded === "true";
       searchPromise = Promise.resolve();
       return searchPromise;
     }
@@ -103,7 +113,11 @@
       script.setAttribute("data-styles", runtimeAssets.searchStyles);
       script.setAttribute("data-sodo-search", runtimeAssets.searchRoot);
       script.setAttribute("data-locale", runtimeAssets.searchLocale || "zh");
-      script.addEventListener("load", resolve, {once: true});
+      script.addEventListener("load", function () {
+        script.dataset.loaded = "true";
+        searchReady = true;
+        resolve();
+      }, {once: true});
       script.addEventListener("error", function (error) {
         script.remove();
         searchPromise = null;
@@ -519,7 +533,7 @@
   document.addEventListener("click", function (event) {
     var searchTrigger = event.target.closest && event.target.closest("[data-ghost-search]");
     if (!searchTrigger) return;
-    if (document.querySelector("script[data-sodo-search]")) {
+    if (searchReady) {
       window.requestAnimationFrame(function () { revealSearchInterface(null); });
       return;
     }
@@ -536,6 +550,17 @@
         console.error("Ghost Search failed to load", error);
       });
   }, true);
+
+  document.querySelectorAll("[data-ghost-search]").forEach(function (searchTrigger) {
+    var prewarmSearch = function () {
+      loadSearch().catch(function () {
+        // A click can retry after a transient preload failure.
+      });
+    };
+    searchTrigger.addEventListener("pointerenter", prewarmSearch, {once: true, passive: true});
+    searchTrigger.addEventListener("focus", prewarmSearch, {once: true, passive: true});
+    searchTrigger.addEventListener("touchstart", prewarmSearch, {once: true, passive: true});
+  });
 
   if (
     /^#\/portal(?:\/|$)/.test(window.location.hash)
@@ -868,7 +893,7 @@
       loadEngagement().then(function (available) {
         if (!available) return;
         sendPresence(false);
-        presenceTimer = window.setInterval(function () { sendPresence(false); }, 20000);
+        presenceTimer = window.setInterval(function () { sendPresence(false); }, 30000);
         document.addEventListener("visibilitychange", function () {
           if (document.visibilityState === "visible") sendPresence(false);
         });

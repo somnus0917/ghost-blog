@@ -70,6 +70,7 @@ def main() -> int:
         fail("theme must target Ghost 6 or newer")
     css = (THEME_ROOT / "assets" / "css" / "screen.css").read_text(encoding="utf-8")
     default_template = (THEME_ROOT / "default.hbs").read_text(encoding="utf-8")
+    home_template = (THEME_ROOT / "home.hbs").read_text(encoding="utf-8")
     post_template = (THEME_ROOT / "post.hbs").read_text(encoding="utf-8")
     main_js = (THEME_ROOT / "assets" / "js" / "main.js").read_text(encoding="utf-8")
     privacy_template = (THEME_ROOT / "privacy-ripfullpage.hbs").read_text(encoding="utf-8")
@@ -189,6 +190,16 @@ def main() -> int:
         fail("Ghost Portal must load on demand")
     if "data-search-src=" not in default_template or "function loadSearch()" not in main_js:
         fail("Ghost Search must load on demand")
+    if "@~" in default_template:
+        fail("runtime CDN dependencies must use exact versions")
+    if "sodo-search@1.8.212" not in default_template or "portal@2.69.201" not in default_template:
+        fail("runtime Ghost dependencies must remain pinned to reviewed versions")
+    if "pointerenter" not in main_js or "prewarmSearch" not in main_js:
+        fail("Ghost Search must prewarm on user intent")
+    if 'excerpt words="22"' in home_template or home_template.count('data-character-excerpt="80"') != 2:
+        fail("Chinese homepage excerpts must use character-based truncation")
+    if 'querySelectorAll("[data-character-excerpt]")' not in main_js:
+        fail("custom Chinese excerpts must receive a client-side character limit")
     if 'mode="auto"' not in post_template or "comments-dark" not in main_js:
         fail("Ghost comments must synchronize with the site color mode")
     if "data-comments-template" not in post_template or "function activateComments(" not in main_js:
@@ -205,6 +216,17 @@ def main() -> int:
         fail("Docker Compose must expose container health checks")
     if "handle_path /.ghost/analytics/*" not in caddy:
         fail("Caddy must route Ghost Analytics events to the proxy service")
+    for header in (
+        "Strict-Transport-Security",
+        "X-Content-Type-Options",
+        "Referrer-Policy",
+        "Permissions-Policy",
+        "Content-Security-Policy-Report-Only",
+    ):
+        if header not in caddy:
+            fail(f"Caddy must set {header}")
+    if "X-Somnus-Worker-Proxy" not in caddy:
+        fail("Caddy must authenticate requests to the engagement Worker")
     for worker_file in (
         WORKER_ROOT / "src" / "index.mjs",
         WORKER_ROOT / "migrations" / "0001_engagement.sql",
