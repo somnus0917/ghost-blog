@@ -22,5 +22,21 @@ database_name = "somnus-blog-engagement"
 database_id = "replace-after-running-wrangler-d1-create"
 migrations_dir = "migrations"
 
+[[ratelimits]]
+name = "ENGAGEMENT_RATE_LIMITER"
+namespace_id = "91017"
+
+  [ratelimits.simple]
+  limit = 30
+  period = 60
+
+[[ratelimits]]
+name = "SIGNUP_RATE_LIMITER"
+namespace_id = "91018"
+
+  [ratelimits.simple]
+  limit = 5
+  period = 60
+
 [triggers]
-crons = ["17 * * * *"]
+crons = ["*/10 * * * *"]

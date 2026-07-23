@@ -5,7 +5,7 @@
 - Ghost 6 官方 Analytics + Tinybird：采集页面访问并计算单篇文章累计阅读数。
 - Cloudflare Worker + D1：向主题提供安全的公开查询、点赞和 45 秒在线心跳。
 
-浏览器只访问同源的 `/api/engagement/*`，Caddy 将该路径代理到 Worker 自定义域名 `engagement.somnus.wiki`。Tinybird 管理令牌和访客哈希盐只能保存为服务端密钥，不能写进主题、Git 或浏览器代码。
+浏览器只访问同源的 `/api/engagement/*`，Caddy 将该路径代理到 Worker 自定义域名 `engagement.somnus.wiki`，并注入只有 Caddy 和 Worker 知道的代理凭证。Tinybird 管理令牌、访客签名盐和代理凭证只能保存为服务端密钥，不能写进主题、Git 或浏览器代码。
 
 ## 1. 登录并部署 Ghost 官方 Tinybird 数据文件
 
@@ -84,9 +84,11 @@ Ghost 部署 Tinybird 数据文件后，会创建名为 `stats_page` 的只读 T
 cd worker
 npx wrangler secret put TINYBIRD_STATS_TOKEN
 npx wrangler secret put VISITOR_HASH_SALT
+npx wrangler secret put WORKER_PROXY_SECRET
 ```
 
-`VISITOR_HASH_SALT` 使用新的随机值，例如：
+`VISITOR_HASH_SALT` 和 `WORKER_PROXY_SECRET` 必须使用两个不同的新随机值，
+并且至少 32 个字符。例如分别运行两次：
 
 ```bash
 openssl rand -hex 32
@@ -98,17 +100,30 @@ openssl rand -hex 32
 engagement.somnus.wiki
 ```
 
-部署：
+先把 `WORKER_PROXY_SECRET` 的同一个值加入生产 Caddy 的环境并重载 Caddy，
+再配置 Wrangler Secret。旧 Worker 会安全地忽略新增请求头，因此这个顺序
+不会中断现有接口。然后应用迁移并部署：
 
 ```bash
+npx wrangler d1 migrations apply somnus-blog-engagement --remote
 npx wrangler deploy
 ```
+
+示例配置还包含两组 Cloudflare Rate Limiting 绑定：互动接口每个访客每分钟
+30 次，注册接口每个邮箱每分钟 5 次。部署需要 Wrangler 4.36 或更新版本。
+`namespace_id` 只需在同一账号内保持唯一；如果 `91017` 或 `91018` 已被其他
+Worker 使用，请换成另外两个数字，并把同样的值写入实际
+`worker/wrangler.toml`。
 
 由于 `blog.somnus.wiki` 当前是 DNS-only、不会经过 Cloudflare 边缘路由，生产 Caddy 还需要加入：
 
 ```caddyfile
 handle /api/engagement/* {
-    reverse_proxy https://engagement.somnus.wiki
+    reverse_proxy https://engagement.somnus.wiki {
+        header_up Host engagement.somnus.wiki
+        header_up X-Somnus-Client-IP {remote_host}
+        header_up X-Somnus-Worker-Proxy {$WORKER_PROXY_SECRET}
+    }
 }
 ```
 
@@ -124,9 +139,11 @@ POST /api/engagement/:post_uuid/like
 
 - 阅读量来自 Ghost 官方 Tinybird `api_post_visitor_counts` Pipe。
 - 在线人数只统计最近 45 秒仍在发送心跳的浏览器会话。
-- 在线会话 ID 只保存在 `sessionStorage`，关闭标签页后失效。
-- 只有用户主动点赞后才会在 `localStorage` 生成点赞 ID。
-- Worker 加盐哈希访客 ID，D1 不保存原始 ID、邮箱或 IP 地址。
+- Worker 生成并验证带 HMAC 签名的 HttpOnly Cookie，不信任请求 JSON 中的访客 ID。
+- Worker 只把签名身份和可信客户端 IP 做加盐哈希后用于限流；D1 不保存
+  Cookie、原始 ID、邮箱或 IP 地址。
 - Worker 限制网页来源为 `https://blog.somnus.wiki`。
+- Worker 要求 Caddy 注入的内部凭证，直接调用自定义域名会返回 `403`。
+- Worker 对互动写入和邮件注册分别限流；超过额度返回 `429`。
 
 如果 Worker 尚未部署或暂时不可用，主题会自动隐藏统计和点赞，不影响文章内容、评论、目录或阅读进度。
