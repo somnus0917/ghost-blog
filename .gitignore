@@ -6,10 +6,13 @@ build/
 content/
 mysql/
 backups/
-theme/somnus-yohaku/assets/fonts/*
+theme/somnus-yohaku/assets/fonts/MapleMono-NF-CN-Regular.woff2
 __pycache__/
 *.py[cod]
 .DS_Store
 .playwright-cli/
+output/
 worker/wrangler.toml
 .wrangler/
+node_modules/
+.venv-fonts/

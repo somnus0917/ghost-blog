@@ -20,7 +20,16 @@
 
     {{#if feature_image}}
         <figure class="article-cover">
-            <img src="{{img_url feature_image size="l"}}" alt="{{#if feature_image_alt}}{{feature_image_alt}}{{else}}{{title}}{{/if}}">
+            <img
+                src="{{img_url feature_image size="l"}}"
+                srcset="{{img_url feature_image size="s"}} 480w, {{img_url feature_image size="m"}} 960w, {{img_url feature_image size="l"}} 1600w"
+                sizes="(max-width: 620px) calc(100vw - 40px), (max-width: 1180px) calc(100vw - 48px), 1080px"
+                alt="{{#if feature_image_alt}}{{feature_image_alt}}{{else}}{{title}}{{/if}}"
+                width="1600"
+                height="1000"
+                decoding="async"
+                fetchpriority="high"
+            >
             {{#if feature_image_caption}}<figcaption>{{feature_image_caption}}</figcaption>{{/if}}
         </figure>
     {{/if}}
@@ -35,9 +44,9 @@
         </div>
         <aside class="article-actions" aria-label="文章操作">
             <button type="button" data-like-post title="喜欢这篇文章" aria-label="喜欢这篇文章" aria-pressed="false" hidden>♡</button>
-            <button type="button" data-copy-url title="复制文章链接">↗</button>
-            <button type="button" data-ghost-search title="站内搜索">⌕</button>
-            <a href="#comments" title="查看评论">⌄</a>
+            <button type="button" data-copy-url title="复制文章链接" aria-label="复制文章链接">↗</button>
+            <button type="button" data-ghost-search title="站内搜索" aria-label="站内搜索">⌕</button>
+            <a href="#comments" title="查看评论" aria-label="查看评论">⌄</a>
         </aside>
     </div>
 
@@ -53,6 +62,15 @@
         <h2 id="comments-title">评论</h2>
         <p class="comments-note">注册或登录后即可评论。</p>
     </header>
-    {{comments title="" count=false mode="auto"}}
+    <div class="comments-loader" data-comments-placeholder>
+        <span>评论将在接近此处时加载。</span>
+        <button type="button" data-load-comments>立即加载</button>
+    </div>
+    <div data-comments-mount>
+        <template data-comments-template>
+            {{comments title="" count=false mode="auto"}}
+        </template>
+    </div>
+    <noscript><p class="comments-noscript">请启用 JavaScript 查看评论。</p></noscript>
 </section>
 {{/post}}

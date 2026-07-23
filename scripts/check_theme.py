@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import json
+import re
+import struct
 import sys
 import zipfile
 from pathlib import Path
@@ -12,6 +14,8 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 THEME_ROOT = REPO_ROOT / "theme" / "somnus-yohaku"
 SHARED_FONT = REPO_ROOT / "shared" / "fonts" / "LXGWWenKai-Regular.woff2"
+WEB_FONT_DIR = THEME_ROOT / "assets" / "fonts" / "lxgw-wenkai-v2"
+FONT_MANIFEST = WEB_FONT_DIR / "manifest.json"
 ARCHIVE = REPO_ROOT / "build" / "somnus-yohaku.zip"
 WORKER_ROOT = REPO_ROOT / "worker"
 REQUIRED = {
@@ -24,12 +28,33 @@ REQUIRED = {
     "assets/js/main.js",
     "assets/js/mathjax.js",
     "assets/js/mathjax.LICENSE.txt",
+    "assets/fonts/lxgw-wenkai-v2/font.css",
+    "assets/fonts/lxgw-wenkai-v2/manifest.json",
+    "assets/fonts/lxgw-wenkai-v2/OFL.txt",
+    "assets/images/site-cover-v1.png",
+    "partials/route-description.hbs",
 }
 
 
 def fail(message: str) -> None:
     print(f"theme check failed: {message}", file=sys.stderr)
     raise SystemExit(1)
+
+
+def parse_unicode_range(value: str) -> set[int]:
+    points: set[int] = set()
+    for token in value.split(","):
+        match = re.fullmatch(
+            r"U\+([0-9A-F]+)(?:-([0-9A-F]+))?",
+            token.strip(),
+            flags=re.IGNORECASE,
+        )
+        if not match:
+            fail(f"unsupported unicode-range token: {token}")
+        start = int(match.group(1), 16)
+        end = int(match.group(2) or match.group(1), 16)
+        points.update(range(start, end + 1))
+    return points
 
 
 def main() -> int:
@@ -48,29 +73,127 @@ def main() -> int:
     routes = (REPO_ROOT / "routes.yaml").read_text(encoding="utf-8")
     compose = (REPO_ROOT / "docker-compose.yml").read_text(encoding="utf-8")
     caddy = (REPO_ROOT / "Caddyfile.snippet").read_text(encoding="utf-8")
-    if "LXGW WenKai Web" not in css or "@font-face" not in css:
-        fail("LXGW WenKai web font is not wired into screen.css")
-    if "/content/images/fonts/LXGWWenKai-Regular.woff2" not in css:
-        fail("LXGW WenKai must use the persistent Ghost content font path")
+    font_stylesheet = (
+        '<link rel="stylesheet" href="{{asset "fonts/lxgw-wenkai-v2/font.css"}}">'
+    )
+    screen_stylesheet = '<link rel="stylesheet" href="{{asset "css/screen.css"}}">'
+    if font_stylesheet not in default_template:
+        fail("default.hbs must load the complete LXGW WenKai shard stylesheet")
+    if default_template.index(font_stylesheet) > default_template.index(screen_stylesheet):
+        fail("webfont stylesheet must be discovered before the main stylesheet")
     if not SHARED_FONT.is_file():
         fail(f"missing shared web font: {SHARED_FONT}")
+    if not FONT_MANIFEST.is_file():
+        fail(f"missing webfont manifest: {FONT_MANIFEST}")
+    manifest = json.loads(FONT_MANIFEST.read_text(encoding="utf-8"))
+    if manifest.get("schema") != 1:
+        fail("webfont manifest schema must be 1")
+    core_file = str(manifest.get("coreFile", ""))
+    core_font = WEB_FONT_DIR / core_file
+    if not core_file or not core_font.is_file():
+        fail("webfont manifest points to a missing core file")
+    if core_font.stat().st_size > 700 * 1024:
+        fail("core webfont is unexpectedly large")
+    core_preload = f'href="/assets/fonts/lxgw-wenkai-v2/{core_file}"'
+    if core_preload not in default_template or 'rel="preload"' not in default_template:
+        fail("default.hbs must preload the core webfont")
+    font_css_path = WEB_FONT_DIR / "font.css"
+    if not font_css_path.is_file():
+        fail(f"missing shard stylesheet: {font_css_path}")
+    font_css = font_css_path.read_text(encoding="utf-8")
+    for token in ('font-family:"LXGW WenKai Web"', "unicode-range:", 'local("LXGW WenKai")'):
+        if token not in font_css:
+            fail(f"webfont stylesheet is missing {token}")
+    core_css_points: set[int] = set()
+    fallback_css_points: set[int] = set()
+    for face in re.findall(r"@font-face\{[^}]+\}", font_css):
+        file_match = re.search(r'url\("([^"]+\.woff2)"\)', face)
+        range_match = re.search(r"unicode-range:([^;}]+);", face)
+        if not file_match or not range_match:
+            fail("every generated font face must declare a file and unicode-range")
+        points = parse_unicode_range(range_match.group(1))
+        if Path(file_match.group(1)).name == core_file:
+            core_css_points.update(points)
+        else:
+            fallback_css_points.update(points)
+    if not core_css_points or not fallback_css_points:
+        fail("webfont stylesheet must include both core and fallback ranges")
+    if core_css_points & fallback_css_points:
+        fail("core and fallback unicode ranges must be disjoint")
+    fallback_fonts = sorted(WEB_FONT_DIR.glob("LXGWWenKai-Fallback-v2-*.woff2"))
+    if len(fallback_fonts) < 100:
+        fail("complete webfont fallback shard set is missing")
+    if manifest.get("fallbackFileCount") != len(fallback_fonts):
+        fail("webfont fallback count does not match the manifest")
+    if font_css.rfind(core_file) <= font_css.rfind("LXGWWenKai-Fallback-v2-"):
+        fail("core webfont faces must follow fallback faces so overlaps prefer the core")
+    referenced_fonts = {
+        Path(match).name
+        for match in re.findall(r'url\("([^"]+\.woff2)"\)', font_css)
+    }
+    actual_font_names = {core_font.name, *(path.name for path in fallback_fonts)}
+    if referenced_fonts != actual_font_names:
+        fail("webfont stylesheet references do not match the generated shard files")
+    fallback_bytes = sum(path.stat().st_size for path in fallback_fonts)
+    total_font_bytes = core_font.stat().st_size + fallback_bytes
+    if manifest.get("coreBytes") != core_font.stat().st_size:
+        fail("core webfont size does not match the manifest")
+    if manifest.get("fallbackBytes") != fallback_bytes:
+        fail("fallback webfont size does not match the manifest")
+    if manifest.get("totalFontBytes") != total_font_bytes:
+        fail("total webfont size does not match the manifest")
+    if total_font_bytes > 16 * 1024 * 1024:
+        fail("complete webfont shard inventory is unexpectedly large")
+    cover_image = THEME_ROOT / "assets" / "images" / "site-cover-v1.png"
+    with cover_image.open("rb") as image_file:
+        if image_file.read(8) != b"\x89PNG\r\n\x1a\n":
+            fail("site cover must be a PNG")
+        chunk_length = struct.unpack(">I", image_file.read(4))[0]
+        if image_file.read(4) != b"IHDR" or chunk_length != 13:
+            fail("site cover has an invalid PNG header")
+        width, height = struct.unpack(">II", image_file.read(8))
+    if (width, height) != (1200, 630):
+        fail(f"site cover must be 1200x630, got {width}x{height}")
+    if cover_image.stat().st_size > 500 * 1024:
+        fail("site cover is unexpectedly large")
     if "cdn.jsdelivr.net/npm/mathjax" in default_template:
         fail("MathJax must be loaded from the theme bundle")
-    if 'asset "js/mathjax.js"' not in default_template:
-        fail("default.hbs must load the local MathJax bundle")
+    if 'data-mathjax-src="{{asset "js/mathjax.js"}}"' not in default_template:
+        fail("default.hbs must expose the local MathJax bundle for lazy loading")
+    if '<script async src="{{asset "js/mathjax.js"}}"' in default_template:
+        fail("MathJax must not load eagerly on every page")
+    if '<script defer src="{{asset "js/mermaid.js"}}"' in default_template:
+        fail("Mermaid must not load eagerly on every page")
+    if "loadMathJaxIfNeeded" not in main_js or "somnus-mermaid" not in main_js:
+        fail("main.js must lazy-load MathJax and Mermaid")
+    ghost_head_match = re.search(r'{{ghost_head exclude="([^"]+)"}}', default_template)
+    ghost_head_excludes = set(ghost_head_match.group(1).split(",")) if ghost_head_match else set()
+    if not {"portal", "search", "comment_counts"}.issubset(ghost_head_excludes):
+        fail("Portal, Search, and comment counts must be excluded from eager ghost_head")
+    if "data-portal-src=" not in default_template or "function loadPortal()" not in main_js:
+        fail("Ghost Portal must load on demand")
+    if "data-search-src=" not in default_template or "function loadSearch()" not in main_js:
+        fail("Ghost Search must load on demand")
     if 'mode="auto"' not in post_template or "comments-dark" not in main_js:
         fail("Ghost comments must synchronize with the site color mode")
+    if "data-comments-template" not in post_template or "function activateComments(" not in main_js:
+        fail("Ghost comments must load near the viewport instead of eagerly")
     if 'data-post-uuid="{{uuid}}"' not in post_template or "data-like-post" not in post_template:
         fail("post.hbs must expose the engagement controls")
     if '"/api/engagement/"' not in main_js or '"/presence"' not in main_js or '"/like"' not in main_js:
         fail("main.js must connect the post engagement API")
     if "traffic-analytics:" not in compose or "tinybird-deploy:" not in compose:
         fail("Docker Compose must include optional Ghost Analytics services")
+    if "ghost:6-alpine@sha256:" not in compose or "mysql:8.0@sha256:" not in compose:
+        fail("production Ghost and MySQL images must be pinned by digest")
+    if "healthcheck:" not in compose:
+        fail("Docker Compose must expose container health checks")
     if "handle_path /.ghost/analytics/*" not in caddy:
         fail("Caddy must route Ghost Analytics events to the proxy service")
     for worker_file in (
         WORKER_ROOT / "src" / "index.mjs",
         WORKER_ROOT / "migrations" / "0001_engagement.sql",
+        WORKER_ROOT / "migrations" / "0002_presence_cleanup_index.sql",
         WORKER_ROOT / "wrangler.toml.example",
     ):
         if not worker_file.is_file():
@@ -86,13 +209,18 @@ def main() -> int:
             fail(f"archive is missing: {', '.join(missing)}")
         if "assets/fonts/MapleMono-NF-CN-Regular.woff2" in names:
             fail("unused Maple Mono font must not be shipped")
-        if any(name.endswith(".woff2") for name in names):
-            fail("large fonts must stay outside the repeatedly uploaded theme archive")
+        archive_fonts = {name for name in names if name.endswith(".woff2")}
+        expected_fonts = {
+            f"assets/fonts/lxgw-wenkai-v2/{name}"
+            for name in actual_font_names
+        }
+        if archive_fonts != expected_fonts:
+            fail("archive font inventory does not match the validated Unicode shards")
         bad = [name for name in names if name.startswith("/") or ".." in Path(name).parts]
         if bad:
             fail("archive contains unsafe paths")
     size_mib = ARCHIVE.stat().st_size / (1024 * 1024)
-    if size_mib > 2:
+    if size_mib > 20:
         fail(f"archive is unexpectedly large: {size_mib:.1f} MiB")
     print(f"theme check passed: {len(names)} files, {size_mib:.1f} MiB")
     return 0

@@ -1,0 +1,10 @@
+{
+  "name": "somnus-ghost-tooling",
+  "private": true,
+  "scripts": {
+    "build:font": "node scripts/build_webfont.mjs"
+  },
+  "devDependencies": {
+    "cn-font-split": "7.4.3"
+  }
+}

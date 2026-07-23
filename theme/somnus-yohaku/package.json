@@ -20,6 +20,8 @@
       "m": { "width": 960 },
       "l": { "width": 1600 }
     },
-    "card_assets": true
+    "card_assets": {
+      "exclude": ["bookmark", "gallery"]
+    }
   }
 }

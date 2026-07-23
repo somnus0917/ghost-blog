@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <pattern id="loops" width="220" height="150" patternUnits="userSpaceOnUse">
+      <path d="M-22 82C33 8 97 9 132 54c33 42 14 91-26 96-43 6-75-38-50-72 24-33 87-22 120 22 21 28 43 34 70 11"
+            fill="none" stroke="#b8dfe0" stroke-width="3" opacity=".22"/>
+    </pattern>
+    <linearGradient id="fade" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fdfdfb"/>
+      <stop offset="1" stop-color="#fbf6f5"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#fade)"/>
+  <rect width="1200" height="630" fill="url(#loops)"/>
+
+  <g transform="translate(104 102)">
+    <circle cx="30" cy="30" r="30" fill="#cf6d78"/>
+    <path d="M20 30h20M30 20v20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+
+    <text x="0" y="164" fill="#282825" font-family="Helvetica Neue, Helvetica, sans-serif"
+          font-size="92" font-weight="700" letter-spacing="-4">Somnus</text>
+    <text x="0" y="224" fill="#cf6d78" font-family="Songti SC, serif"
+          font-size="30" font-weight="600">技术 · 工具 · 实验 · 日常</text>
+    <text x="0" y="292" fill="#6c6b65" font-family="Songti SC, serif"
+          font-size="27">把折腾过的东西写下来，把走过的路留给后来的人。</text>
+
+    <rect x="0" y="354" width="410" height="52" rx="26" fill="#fff" stroke="#e7c9ce"/>
+    <circle cx="28" cy="380" r="6" fill="#cf6d78"/>
+    <text x="50" y="390" fill="#6c6b65" font-family="Helvetica Neue, Helvetica, sans-serif"
+          font-size="22" letter-spacing="1.5">blog.somnus.wiki</text>
+  </g>
+
+  <g transform="translate(934 465)" opacity=".95">
+    <rect width="154" height="58" rx="29" fill="#f5dfe2" stroke="#e7c9ce"/>
+    <text x="77" y="38" text-anchor="middle" fill="#b65766"
+          font-family="SFMono-Regular, Menlo, monospace" font-size="22" font-weight="700">✦ NOTES</text>
+  </g>
+</svg>

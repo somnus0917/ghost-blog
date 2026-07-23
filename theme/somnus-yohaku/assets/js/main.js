@@ -2,12 +2,298 @@
   "use strict";
 
   var root = document.documentElement;
+  var runtimeScript = document.currentScript;
+  var runtimeAssets = runtimeScript ? runtimeScript.dataset : {};
   var savedTheme = root.dataset.theme || "system";
 
   try {
     savedTheme = localStorage.getItem("somnus-theme") || savedTheme;
   } catch (error) {
     // Keep the server-provided system theme when storage is unavailable.
+  }
+
+  function loadScriptOnce(id, source) {
+    if (!source) return Promise.reject(new Error("Missing script source for " + id));
+    var existing = document.getElementById(id);
+    if (existing) {
+      if (existing.dataset.loaded === "true") return Promise.resolve();
+      return new Promise(function (resolve, reject) {
+        existing.addEventListener("load", resolve, {once: true});
+        existing.addEventListener("error", reject, {once: true});
+      });
+    }
+    return new Promise(function (resolve, reject) {
+      var script = document.createElement("script");
+      script.id = id;
+      script.src = source;
+      script.async = true;
+      script.addEventListener("load", function () {
+        script.dataset.loaded = "true";
+        resolve();
+      }, {once: true});
+      script.addEventListener("error", reject, {once: true});
+      document.head.appendChild(script);
+    });
+  }
+
+  function runWhenIdle(callback, timeout) {
+    if ("requestIdleCallback" in window) {
+      return window.requestIdleCallback(callback, {timeout: timeout || 1500});
+    }
+    return window.setTimeout(callback, Math.min(timeout || 1500, 250));
+  }
+
+  var portalPromise;
+
+  function loadPortal() {
+    if (portalPromise) return portalPromise;
+    var existing = document.getElementById("somnus-portal");
+    if (existing) {
+      portalPromise = Promise.resolve();
+      return portalPromise;
+    }
+    portalPromise = new Promise(function (resolve, reject) {
+      var script = document.createElement("script");
+      script.id = "somnus-portal";
+      script.src = runtimeAssets.portalSrc;
+      script.defer = true;
+      script.crossOrigin = "anonymous";
+      script.setAttribute("data-i18n", "true");
+      script.setAttribute("data-ghost", runtimeAssets.portalGhost);
+      script.setAttribute("data-api", runtimeAssets.portalApi);
+      script.setAttribute("data-key", runtimeAssets.portalKey);
+      script.setAttribute("data-locale", runtimeAssets.portalLocale || "zh");
+      script.addEventListener("load", resolve, {once: true});
+      script.addEventListener("error", reject, {once: true});
+      document.head.appendChild(script);
+    });
+    return portalPromise;
+  }
+
+  function openPortal(action) {
+    var targetHash = "#/portal/" + action;
+    if (window.location.hash !== targetHash) {
+      window.location.hash = targetHash;
+    }
+    loadPortal()
+      .then(function () {
+        window.dispatchEvent(new HashChangeEvent("hashchange"));
+      })
+      .catch(function (error) {
+        console.error("Ghost Portal failed to load", error);
+      });
+  }
+
+  var searchPromise;
+
+  function loadSearch() {
+    if (searchPromise) return searchPromise;
+    var existing = document.querySelector("script[data-sodo-search]");
+    if (existing) {
+      searchPromise = Promise.resolve();
+      return searchPromise;
+    }
+    searchPromise = new Promise(function (resolve, reject) {
+      var script = document.createElement("script");
+      script.id = "somnus-search";
+      script.src = runtimeAssets.searchSrc;
+      script.async = true;
+      script.crossOrigin = "anonymous";
+      script.setAttribute("data-key", runtimeAssets.searchKey);
+      script.setAttribute("data-styles", runtimeAssets.searchStyles);
+      script.setAttribute("data-sodo-search", runtimeAssets.searchRoot);
+      script.setAttribute("data-locale", runtimeAssets.searchLocale || "zh");
+      script.addEventListener("load", resolve, {once: true});
+      script.addEventListener("error", function (error) {
+        script.remove();
+        searchPromise = null;
+        reject(error);
+      }, {once: true});
+      document.head.appendChild(script);
+    });
+    return searchPromise;
+  }
+
+  function removeSearchLoading(loading, frameContainer) {
+    if (frameContainer) frameContainer.style.removeProperty("visibility");
+    if (loading && loading.isConnected) loading.remove();
+  }
+
+  function showSearchLoading() {
+    var existing = document.querySelector(".search-loading");
+    if (existing) return existing;
+
+    var loading = document.createElement("div");
+    loading.className = "search-loading";
+    loading.setAttribute("role", "status");
+    loading.setAttribute("aria-live", "polite");
+    loading.innerHTML = [
+      '<div class="search-loading-panel">',
+      '<svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18">',
+      '<path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z"></path>',
+      "</svg>",
+      "<span>正在打开搜索…</span>",
+      '<i class="search-loading-spinner" aria-hidden="true"></i>',
+      "</div>"
+    ].join("");
+    document.body.appendChild(loading);
+    return loading;
+  }
+
+  var searchBackdropObserver;
+
+  function mountSearchBackdrop(searchFrame, darkTheme) {
+    if (searchBackdropObserver) searchBackdropObserver.disconnect();
+
+    var backdrop = document.querySelector(".search-backdrop");
+    if (!backdrop) {
+      backdrop = document.createElement("div");
+      backdrop.className = "search-backdrop";
+      backdrop.setAttribute("aria-hidden", "true");
+      document.body.appendChild(backdrop);
+    }
+    backdrop.classList.toggle("is-dark", darkTheme);
+
+    searchBackdropObserver = new MutationObserver(function () {
+      if (searchFrame.isConnected) return;
+      backdrop.remove();
+      searchBackdropObserver.disconnect();
+      searchBackdropObserver = null;
+    });
+    searchBackdropObserver.observe(document.body, {childList: true, subtree: true});
+  }
+
+  function revealSearchInterface(loading) {
+    var frameContainer = null;
+    var startedAt = Date.now();
+    var rootStyles = window.getComputedStyle(root);
+    var selectedTheme = root.dataset.theme || "system";
+    var darkTheme = selectedTheme === "dark"
+      || (selectedTheme === "system"
+        && window.matchMedia
+        && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    var searchPalette = {
+      paper: rootStyles.getPropertyValue("--paper").trim(),
+      raised: rootStyles.getPropertyValue("--paper-raised").trim(),
+      soft: rootStyles.getPropertyValue("--paper-soft").trim(),
+      ink: rootStyles.getPropertyValue("--ink").trim(),
+      inkSoft: rootStyles.getPropertyValue("--ink-soft").trim(),
+      inkFaint: rootStyles.getPropertyValue("--ink-faint").trim(),
+      line: rootStyles.getPropertyValue("--line").trim()
+    };
+
+    function check() {
+      var frames = document.querySelectorAll('.gh-root-frame iframe[title="portal-popup"]');
+      var searchFrame = Array.from(frames).find(function (frame) {
+        try {
+          return Boolean(frame.contentDocument
+            && frame.contentDocument.querySelector('link[href*="sodo-search"]'));
+        } catch (error) {
+          return false;
+        }
+      });
+
+      if (searchFrame) {
+        frameContainer = searchFrame.parentElement;
+        if (frameContainer) frameContainer.style.visibility = "hidden";
+        try {
+          var frameDocument = searchFrame.contentDocument;
+          var stylesheet = frameDocument
+            && frameDocument.querySelector('link[href*="sodo-search"]');
+          var input = frameDocument && frameDocument.querySelector("input");
+          var pendingContent = frameDocument && frameDocument.querySelector(".ghost-display");
+
+          if (input && stylesheet && stylesheet.sheet) {
+            var overrides = frameDocument.getElementById("somnus-search-overrides");
+            if (!overrides) {
+              overrides = frameDocument.createElement("style");
+              overrides.id = "somnus-search-overrides";
+              frameDocument.head.appendChild(overrides);
+            }
+            overrides.textContent = [
+              "html, body {",
+              "  background: transparent !important;",
+              "  color: " + searchPalette.ink + " !important;",
+              "  color-scheme: " + (darkTheme ? "dark" : "light") + ";",
+              "}",
+              "body > div:first-child {",
+              "  background: transparent !important;",
+              "  backdrop-filter: none !important;",
+              "}",
+              ".bg-white { background-color: " + searchPalette.raised + " !important; }",
+              ".bg-neutral-100 { background-color: " + searchPalette.soft + " !important; }",
+              ".border-neutral-200 { border-color: " + searchPalette.line + " !important; }",
+              ".text-neutral-800, .text-neutral-900 { color: " + searchPalette.ink + " !important; }",
+              ".text-neutral-400 { color: " + searchPalette.inkSoft + " !important; }",
+              ".text-neutral-500 { color: " + searchPalette.inkFaint + " !important; }",
+              "input {",
+              "  background: transparent !important;",
+              "  color: " + searchPalette.ink + " !important;",
+              "  caret-color: " + searchPalette.ink + " !important;",
+              "}",
+              "input::placeholder { color: " + searchPalette.inkFaint + " !important; }"
+            ].join("\n");
+
+            if (pendingContent) pendingContent.classList.remove("ghost-display");
+            if (frameContainer) frameContainer.style.background = "transparent";
+            searchFrame.style.background = "transparent";
+            mountSearchBackdrop(searchFrame, darkTheme);
+            removeSearchLoading(loading, frameContainer);
+            window.requestAnimationFrame(function () { input.focus(); });
+            return;
+          }
+        } catch (error) {
+          removeSearchLoading(loading, frameContainer);
+          return;
+        }
+      }
+
+      if (Date.now() - startedAt > 5000) {
+        removeSearchLoading(loading, frameContainer);
+        return;
+      }
+      window.requestAnimationFrame(check);
+    }
+
+    window.requestAnimationFrame(check);
+  }
+
+  function pageContainsMath() {
+    if (document.querySelector("[data-latex-editor]")) return true;
+    var content = document.querySelector(".gh-content");
+    if (!content) return false;
+    var walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+    var node;
+    var mathPattern = /\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|(^|[^\\])\$[^$\n]+\$/;
+    while ((node = walker.nextNode())) {
+      var parent = node.parentElement;
+      if (parent && parent.closest("pre, code, script, style, textarea")) continue;
+      if (mathPattern.test(node.textContent)) return true;
+    }
+    return false;
+  }
+
+  function loadMathJaxIfNeeded() {
+    if (!pageContainsMath()) return;
+    window.MathJax = {
+      tex: {
+        inlineMath: [["$", "$"], ["\\(", "\\)"]],
+        displayMath: [["$$", "$$"], ["\\[", "\\]"]]
+      },
+      options: {skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"]}
+    };
+    loadScriptOnce("somnus-mathjax", runtimeAssets.mathjaxSrc)
+      .then(function () {
+        if (window.MathJax && window.MathJax.startup && window.MathJax.startup.promise) {
+          return window.MathJax.startup.promise;
+        }
+      })
+      .then(function () {
+        document.dispatchEvent(new CustomEvent("somnus:mathjax-ready"));
+      })
+      .catch(function (error) {
+        console.error("MathJax failed to load", error);
+      });
   }
 
   var boundCommentFrames = new WeakSet();
@@ -76,10 +362,16 @@
         frameDocument.documentElement.dataset.somnusSignupBound = "true";
         frameDocument.addEventListener("click", function (event) {
           var signupButton = event.target.closest && event.target.closest('[data-testid="signup-button"]');
-          if (!signupButton) return;
-          event.preventDefault();
-          event.stopImmediatePropagation();
-          window.location.assign("/signup/");
+          var signinButton = event.target.closest && event.target.closest('[data-testid="signin-button"]');
+          if (signupButton) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            window.location.assign("/signup/");
+          } else if (signinButton) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            openPortal("signin");
+          }
         }, true);
       }
     } catch (error) {
@@ -95,6 +387,49 @@
       }
       syncCommentFrame(frame);
     });
+  }
+
+  function activateComments(shell) {
+    if (shell.dataset.commentsState === "loading" || shell.dataset.commentsState === "loaded") {
+      return;
+    }
+    var template = shell.querySelector("[data-comments-template]");
+    var mount = shell.querySelector("[data-comments-mount]");
+    var placeholder = shell.querySelector("[data-comments-placeholder]");
+    var source = template && template.content.querySelector("script[data-ghost-comments]");
+    if (!source || !mount) {
+      if (placeholder) placeholder.textContent = "评论暂时不可用。";
+      shell.dataset.commentsState = "error";
+      return;
+    }
+
+    shell.dataset.commentsState = "loading";
+    if (placeholder) {
+      var message = placeholder.querySelector("span");
+      if (message) message.textContent = "正在加载评论…";
+      var button = placeholder.querySelector("button");
+      if (button) button.disabled = true;
+    }
+
+    var script = document.createElement("script");
+    Array.from(source.attributes).forEach(function (attribute) {
+      if (attribute.name !== "defer") script.setAttribute(attribute.name, attribute.value);
+    });
+    script.async = true;
+    script.addEventListener("load", function () {
+      shell.dataset.commentsState = "loaded";
+      if (placeholder) placeholder.hidden = true;
+      applyTheme(root.dataset.theme || "system");
+    }, {once: true});
+    script.addEventListener("error", function () {
+      shell.dataset.commentsState = "error";
+      if (placeholder) {
+        placeholder.hidden = false;
+        placeholder.textContent = "评论加载失败，请刷新页面后重试。";
+      }
+    }, {once: true});
+    template.remove();
+    mount.appendChild(script);
   }
 
   function applyTheme(theme) {
@@ -122,7 +457,28 @@
 
   document.querySelectorAll(".comments-shell").forEach(function (shell) {
     new MutationObserver(bindCommentFrames).observe(shell, {childList: true, subtree: true});
+    var loadButton = shell.querySelector("[data-load-comments]");
+    if (loadButton) {
+      loadButton.addEventListener("click", function () { activateComments(shell); });
+    }
+    if ("IntersectionObserver" in window) {
+      var commentsObserver = new IntersectionObserver(function (entries, observer) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          observer.unobserve(entry.target);
+          activateComments(entry.target);
+        });
+      }, {rootMargin: "800px 0px"});
+      commentsObserver.observe(shell);
+    } else {
+      activateComments(shell);
+    }
   });
+
+  if (window.location.hash === "#comments") {
+    var linkedComments = document.querySelector(".comments-shell");
+    if (linkedComments) activateComments(linkedComments);
+  }
 
   if (window.matchMedia) {
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () {
@@ -147,34 +503,100 @@
   });
 
   document.addEventListener("click", function (event) {
-    var signupLink = event.target.closest && event.target.closest('[data-portal="signup"], a[href="#/portal/signup"]');
-    if (!signupLink) return;
+    var portalLink = event.target.closest && event.target.closest('[data-portal], a[href^="#/portal/"]');
+    if (!portalLink) return;
+    var action = portalLink.dataset.portal
+      || (portalLink.getAttribute("href") || "").replace(/^#\/portal\/?/, "");
     event.preventDefault();
     event.stopImmediatePropagation();
-    window.location.assign("/signup/");
+    if (action === "signup") {
+      window.location.assign("/signup/");
+      return;
+    }
+    if (action) openPortal(action);
   }, true);
+
+  document.addEventListener("click", function (event) {
+    var searchTrigger = event.target.closest && event.target.closest("[data-ghost-search]");
+    if (!searchTrigger) return;
+    if (document.querySelector("script[data-sodo-search]")) {
+      window.requestAnimationFrame(function () { revealSearchInterface(null); });
+      return;
+    }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    var searchLoading = showSearchLoading();
+    loadSearch()
+      .then(function () {
+        revealSearchInterface(searchLoading);
+        searchTrigger.click();
+      })
+      .catch(function (error) {
+        removeSearchLoading(searchLoading);
+        console.error("Ghost Search failed to load", error);
+      });
+  }, true);
+
+  if (
+    /^#\/portal(?:\/|$)/.test(window.location.hash)
+    || new URLSearchParams(window.location.search).has("token")
+  ) {
+    loadPortal().catch(function (error) {
+      console.error("Ghost Portal failed to load", error);
+    });
+  }
 
   var menuButton = document.querySelector("[data-menu-toggle]");
   var menu = document.querySelector("[data-menu]");
   if (menuButton && menu) {
-    menuButton.addEventListener("click", function () {
-      var open = menu.classList.toggle("is-open");
+    var setMenuOpen = function (open) {
+      menu.classList.toggle("is-open", open);
       menuButton.setAttribute("aria-expanded", String(open));
+      menuButton.setAttribute("aria-label", open ? "关闭主导航" : "打开主导航");
+    };
+    menuButton.addEventListener("click", function () {
+      setMenuOpen(!menu.classList.contains("is-open"));
+    });
+    document.addEventListener("keydown", function (event) {
+      if (event.key !== "Escape" || !menu.classList.contains("is-open")) return;
+      setMenuOpen(false);
+      menuButton.focus();
+    });
+    document.addEventListener("click", function (event) {
+      if (
+        !menu.classList.contains("is-open")
+        || menu.contains(event.target)
+        || menuButton.contains(event.target)
+      ) return;
+      setMenuOpen(false);
     });
   }
 
   var articleContent = document.querySelector(".article-content");
   var progressBar = document.querySelector("[data-reading-progress]");
   if (articleContent && progressBar) {
+    var articleStart = 0;
+    var articleDistance = 1;
+    var progressFrame = 0;
     var updateProgress = function () {
-      var start = articleContent.getBoundingClientRect().top + window.scrollY;
-      var distance = Math.max(articleContent.offsetHeight - window.innerHeight * 0.45, 1);
-      var progress = Math.min(1, Math.max(0, (window.scrollY - start + 120) / distance));
+      progressFrame = 0;
+      var progress = Math.min(1, Math.max(0, (window.scrollY - articleStart + 120) / articleDistance));
       progressBar.style.transform = "scaleX(" + progress + ")";
     };
-    updateProgress();
-    window.addEventListener("scroll", updateProgress, {passive: true});
-    window.addEventListener("resize", updateProgress);
+    var scheduleProgress = function () {
+      if (!progressFrame) progressFrame = window.requestAnimationFrame(updateProgress);
+    };
+    var measureArticle = function () {
+      articleStart = articleContent.getBoundingClientRect().top + window.scrollY;
+      articleDistance = Math.max(articleContent.offsetHeight - window.innerHeight * 0.45, 1);
+      scheduleProgress();
+    };
+    measureArticle();
+    window.addEventListener("scroll", scheduleProgress, {passive: true});
+    window.addEventListener("resize", measureArticle);
+    if ("ResizeObserver" in window) {
+      new ResizeObserver(measureArticle).observe(articleContent);
+    }
   }
 
   var toc = document.querySelector("[data-article-toc]");
@@ -193,17 +615,34 @@
         tocNav.appendChild(link);
       });
       var tocLinks = Array.from(tocNav.querySelectorAll("a"));
-      var updateActiveHeading = function () {
-        var active = headings[0];
-        headings.forEach(function (heading) {
-          if (heading.getBoundingClientRect().top <= 190) active = heading;
-        });
+      var setActiveHeading = function (active) {
         tocLinks.forEach(function (link) {
           link.classList.toggle("is-active", link.hash === "#" + active.id);
         });
       };
-      updateActiveHeading();
-      window.addEventListener("scroll", updateActiveHeading, {passive: true});
+      var initialActive = headings[0];
+      headings.forEach(function (heading) {
+        if (heading.getBoundingClientRect().top <= 190) initialActive = heading;
+      });
+      setActiveHeading(initialActive);
+      if ("IntersectionObserver" in window) {
+        var activeHeadingIndex = headings.indexOf(initialActive);
+        var lastTocScrollY = window.scrollY;
+        var headingObserver = new IntersectionObserver(function (entries) {
+          var scrollingDown = window.scrollY >= lastTocScrollY;
+          entries.forEach(function (entry) {
+            var index = headings.indexOf(entry.target);
+            if (scrollingDown && !entry.isIntersecting && entry.boundingClientRect.top < 190) {
+              activeHeadingIndex = Math.max(activeHeadingIndex, index);
+            } else if (!scrollingDown && entry.isIntersecting) {
+              activeHeadingIndex = Math.max(0, index - 1);
+            }
+          });
+          lastTocScrollY = window.scrollY;
+          setActiveHeading(headings[activeHeadingIndex]);
+        }, {rootMargin: "-190px 0px 0px 0px"});
+        headings.forEach(function (heading) { headingObserver.observe(heading); });
+      }
     }
   }
 
@@ -321,7 +760,8 @@
   }
 
   var engagement = document.querySelector("[data-post-engagement]");
-  if (engagement) {
+  var localGhostPreview = /^(?:localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
+  if (engagement && !localGhostPreview) {
     var postUuid = engagement.dataset.postUuid;
     var engagementEndpoint = "/api/engagement/" + encodeURIComponent(postUuid);
     var viewsWrap = engagement.querySelector("[data-engagement-views-wrap]");
@@ -332,35 +772,6 @@
     var likeButton = document.querySelector("[data-like-post]");
     var liked = false;
     var presenceTimer;
-
-    function makeVisitorId() {
-      if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
-      return "visitor_" + Date.now().toString(36) + Math.random().toString(36).slice(2);
-    }
-
-    function readStorage(storage, key) {
-      try { return storage.getItem(key) || ""; } catch (error) { return ""; }
-    }
-
-    function getPresenceVisitor() {
-      var key = "somnus-presence-id";
-      var value = readStorage(sessionStorage, key);
-      if (!value) {
-        value = makeVisitorId();
-        try { sessionStorage.setItem(key, value); } catch (error) {}
-      }
-      return value;
-    }
-
-    function getLikeVisitor(create) {
-      var key = "somnus-like-id";
-      var value = readStorage(localStorage, key);
-      if (!value && create) {
-        value = makeVisitorId();
-        try { localStorage.setItem(key, value); } catch (error) {}
-      }
-      return value;
-    }
 
     function formatCount(value) {
       return new Intl.NumberFormat("zh-CN").format(Math.max(0, Number(value) || 0));
@@ -409,7 +820,7 @@
       return fetch(engagementEndpoint + "/presence", {
         method: "POST",
         headers: {"content-type": "application/json"},
-        body: JSON.stringify({visitor: getPresenceVisitor(), position: readingPosition()}),
+        body: JSON.stringify({position: readingPosition()}),
         credentials: "same-origin",
         keepalive: Boolean(keepalive)
       }).then(function (response) {
@@ -421,9 +832,7 @@
     }
 
     function loadEngagement() {
-      var likeVisitor = getLikeVisitor(false);
-      var headers = likeVisitor ? {"x-like-visitor": likeVisitor} : {};
-      return fetch(engagementEndpoint, {headers: headers, credentials: "same-origin"})
+      return fetch(engagementEndpoint, {credentials: "same-origin"})
         .then(function (response) {
           if (!response.ok) throw new Error("engagement unavailable");
           return response.json();
@@ -442,7 +851,7 @@
         fetch(engagementEndpoint + "/like", {
           method: "POST",
           headers: {"content-type": "application/json"},
-          body: JSON.stringify({visitor: getLikeVisitor(true), liked: !liked}),
+          body: JSON.stringify({liked: !liked}),
           credentials: "same-origin"
         }).then(function (response) {
           if (!response.ok) throw new Error("like unavailable");
@@ -455,18 +864,20 @@
       });
     }
 
-    loadEngagement().then(function (available) {
-      if (!available) return;
-      sendPresence(false);
-      presenceTimer = window.setInterval(function () { sendPresence(false); }, 20000);
-      document.addEventListener("visibilitychange", function () {
-        if (document.visibilityState === "visible") sendPresence(false);
+    runWhenIdle(function () {
+      loadEngagement().then(function (available) {
+        if (!available) return;
+        sendPresence(false);
+        presenceTimer = window.setInterval(function () { sendPresence(false); }, 20000);
+        document.addEventListener("visibilitychange", function () {
+          if (document.visibilityState === "visible") sendPresence(false);
+        });
+        window.addEventListener("pagehide", function () {
+          window.clearInterval(presenceTimer);
+          sendPresence(true);
+        });
       });
-      window.addEventListener("pagehide", function () {
-        window.clearInterval(presenceTimer);
-        sendPresence(true);
-      });
-    });
+    }, 1200);
   }
 
   function isMermaidCode(code) {
@@ -493,8 +904,7 @@
     pre.appendChild(button);
   });
 
-  function renderMermaid() {
-    var blocks = Array.from(document.querySelectorAll(".gh-content pre > code")).filter(isMermaidCode);
+  function renderMermaid(blocks) {
     if (!blocks.length || !window.mermaid) return;
     blocks.forEach(function (code) {
       var pre = code.parentElement;
@@ -505,5 +915,14 @@
     window.mermaid.run({querySelector: ".mermaid"});
   }
 
-  renderMermaid();
+  var mermaidBlocks = Array.from(document.querySelectorAll(".gh-content pre > code")).filter(isMermaidCode);
+  if (mermaidBlocks.length) {
+    loadScriptOnce("somnus-mermaid", runtimeAssets.mermaidSrc)
+      .then(function () { renderMermaid(mermaidBlocks); })
+      .catch(function (error) {
+        console.error("Mermaid failed to load", error);
+      });
+  }
+
+  loadMathJaxIfNeeded();
 })();

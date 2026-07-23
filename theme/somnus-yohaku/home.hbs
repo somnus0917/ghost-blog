@@ -1,11 +1,12 @@
 {{!< default}}
+{{#contentFor "title_prefix"}}Somnus · 技术、工具、实验与日常 | {{/contentFor}}
 
 <section class="home-hero">
     <div class="hero-confetti" aria-hidden="true"></div>
     {{#if @site.icon}}
-        <img class="hero-avatar" src="{{@site.icon}}" alt="{{@site.title}}">
+        <img class="hero-avatar" src="{{@site.icon}}" alt="{{@site.title}}" width="256" height="256">
     {{else}}
-        <img class="hero-avatar" src="{{asset "images/avatar.webp"}}" alt="Somnus">
+        <img class="hero-avatar" src="{{asset "images/avatar.webp"}}" alt="Somnus" width="256" height="256">
     {{/if}}
     <h1 class="hero-title">
         <span class="hero-intro">Hi, I'm <strong>Somnus</strong> <span aria-hidden="true">👋</span></span>

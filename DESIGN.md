@@ -18,11 +18,28 @@ The main design tokens are at the top of `screen.css`. Change `--paper`, `--ink`
 ## Typography
 
 The site self-hosts the official LXGW WenKai Regular web font at
-`shared/fonts/LXGWWenKai-Regular.woff2`. `make dev` installs it into Ghost's persistent
-`content/images/fonts/` directory, and production provisioning does the same. Keeping
-the 7.5 MiB font outside the repeatedly uploaded theme zip prevents cross-border CI
-timeouts. `font-display: swap` keeps text visible while it downloads, and the original
-SIL Open Font License is included beside the font.
+`shared/fonts/LXGWWenKai-Regular.woff2`. Production pages load the versioned
+`assets/fonts/lxgw-wenkai-v2/` webfont bundle embedded in the theme. The bundle has
+two layers: a roughly 0.4 MiB core containing current public content and interface
+copy, plus complete `unicode-range` fallback shards for the rest of LXGW WenKai.
+Normal pages only fetch the core. A new or rare character fetches the matching
+small shard from the same font family, so it does not switch to a system font.
+`font-display: swap` keeps text visible while a requested shard loads. The original
+SIL Open Font License is included in the bundle.
+
+To refresh the core after publishing content, install the Node and Python build
+dependencies once, then rebuild and validate:
+
+```bash
+npm install
+python3 -m venv .venv-fonts
+.venv-fonts/bin/pip install -r requirements-fonts.txt
+make font
+make check
+```
+
+The full bundle makes the deployable theme larger, but CSS `unicode-range` prevents
+a browser from downloading all shards for one page.
 
 The quickest way to change the site's font size is to edit these variables near the
 top of `assets/css/screen.css`:
@@ -40,8 +57,14 @@ Adjust those six values in that order to scale the interface without hunting thr
 individual selectors.
 Run `make dev` after saving, then refresh the local page.
 
-MathJax 3.2.2 and its Apache 2.0 license are bundled in `assets/js/`, so formula
-rendering does not depend on a third-party CDN at page load.
+MathJax 3.2.2 and Mermaid are bundled in `assets/js/`, so formula and diagram
+rendering do not depend on a third-party CDN. `main.js` only fetches either bundle
+when the current article actually contains a formula or Mermaid code block.
+
+Ghost Portal is excluded from the default `ghost_head` payload and loaded only when
+a reader opens sign-in/account UI or returns through a membership magic link. This
+keeps the roughly 600 KiB Portal bundle off ordinary reading pages without removing
+member access.
 
 ## Local loop
 

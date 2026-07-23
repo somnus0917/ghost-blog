@@ -7,19 +7,28 @@
     <title>{{{block "title_prefix"}}}{{meta_title}}</title>
     <script>
       try {
-        document.documentElement.dataset.theme = localStorage.getItem("somnus-theme") || "system";
+        var initialTheme = localStorage.getItem("somnus-theme") || "system";
+        var initialDark = initialTheme === "dark"
+          || (initialTheme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.theme = initialTheme;
+        document.documentElement.style.colorScheme = initialTheme === "system" ? "light dark" : initialTheme;
+        document.querySelector('meta[name="theme-color"]').content = initialDark ? "#171817" : "#fdfdfb";
       } catch (error) {
         document.documentElement.dataset.theme = "system";
+        document.documentElement.style.colorScheme = "light dark";
       }
     </script>
+    <link
+        rel="preload"
+        href="/assets/fonts/lxgw-wenkai-v2/LXGWWenKai-Core-v2.woff2"
+        as="font"
+        type="font/woff2"
+        crossorigin
+    >
+    <link rel="stylesheet" href="{{asset "fonts/lxgw-wenkai-v2/font.css"}}">
     <link rel="stylesheet" href="{{asset "css/screen.css"}}">
-    <script>
-      window.MathJax = {
-        tex: {inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']]},
-        options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
-      };
-    </script>
-    {{ghost_head}}
+    {{{block "head_extra"}}}
+    {{ghost_head exclude="portal,search,comment_counts"}}
 </head>
 <body class="{{body_class}}">
     <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
@@ -29,9 +38,23 @@
     </main>
     {{> "site-footer"}}
 
-    <script defer src="{{asset "js/mermaid.js"}}"></script>
-    <script defer src="{{asset "js/main.js"}}"></script>
-    <script async src="{{asset "js/mathjax.js"}}"></script>
+    <script
+        defer
+        src="{{asset "js/main.js"}}"
+        data-somnus-runtime
+        data-mermaid-src="{{asset "js/mermaid.js"}}"
+        data-mathjax-src="{{asset "js/mathjax.js"}}"
+        data-portal-src="https://cdn.jsdelivr.net/ghost/portal@~2.69/umd/portal.min.js"
+        data-portal-ghost="{{@site.url}}"
+        data-portal-api="{{@site.url}}/ghost/api/content/"
+        data-portal-key="{{content_api_key}}"
+        data-portal-locale="{{@site.locale}}"
+        data-search-src="https://cdn.jsdelivr.net/ghost/sodo-search@~1.8/umd/sodo-search.min.js"
+        data-search-styles="https://cdn.jsdelivr.net/ghost/sodo-search@~1.8/umd/main.css"
+        data-search-root="{{@site.url}}"
+        data-search-key="{{content_api_key}}"
+        data-search-locale="{{@site.locale}}"
+    ></script>
     {{ghost_foot}}
 </body>
 </html>

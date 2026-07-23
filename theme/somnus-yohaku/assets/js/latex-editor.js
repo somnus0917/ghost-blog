@@ -59,7 +59,7 @@
 
     input.addEventListener("input", scheduleRender);
 
-    window.addEventListener("load", function () {
+    function startRendering() {
         if (
             window.MathJax &&
             window.MathJax.startup &&
@@ -69,5 +69,12 @@
         } else {
             renderPreview();
         }
+    }
+
+    document.addEventListener("somnus:mathjax-ready", startRendering, {
+        once: true
     });
+    if (window.MathJax && window.MathJax.typesetPromise) {
+        startRendering();
+    }
 })();
