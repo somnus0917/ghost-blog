@@ -146,6 +146,8 @@ git push origin main
   Ghost；只 push 不会更新线上路由。
 - `worker/**`：需要在 `worker/` 目录完成 Wrangler 登录和配置后运行
   D1 migration 和 `npx wrangler deploy`；GitHub Actions 会验证但不会自动部署。
+- `shared/fonts/lxgw-wenkai-v2/**`：重新构建字体后，需要先运行生产服务器上的
+  `server/sync-fonts.sh`；CI 会在主题部署前核对线上字体清单。
 - `server/**`、`docker-compose.yml`、生产 `.env`：需要通过 SSH/rsync 同步到
   腾讯云并按部署文档执行。
 - Ghost 文章和 Page：直接在 Ghost Admin 编辑，不通过 Git 部署。
@@ -206,13 +208,14 @@ API key to disk or command output. Run it again with
 `python3 scripts/seed_demo_content.py --update-existing` to restore edited demo
 posts to the repository versions.
 
-The theme self-hosts LXGW WenKai in WOFF2 format. The upstream OFL license is
-included in `shared/fonts/OFL.txt`. The theme ships a roughly 0.4 MiB core built from
-the public article corpus and interface copy, followed by complete `unicode-range`
-shards for all remaining characters supported by the source font. A normal page
-only fetches the core; a new or rare character fetches its matching LXGW WenKai
-shard instead of falling back to a visibly different system font. To refresh the
-core and the deterministic full shard set:
+The site self-hosts LXGW WenKai in WOFF2 format. The upstream OFL license is
+included in `shared/fonts/OFL.txt`. The deployable theme contains a roughly
+0.4 MiB core built from the public article corpus and interface copy. Complete
+`unicode-range` shards for all remaining characters live outside the theme under
+`shared/fonts/lxgw-wenkai-v2/` and are served from
+`/content/images/fonts/lxgw-wenkai-v2/`. A normal page only fetches the core; a new
+or rare character fetches its matching LXGW WenKai shard instead of falling back
+to a visibly different system font. To refresh both deterministic layers:
 
 ```bash
 npm install
@@ -222,11 +225,13 @@ npm run build:font
 make check
 ```
 
-The deployable theme contains the complete font inventory, but browsers do not
-download every shard: CSS `unicode-range` selects only the files needed by the
-characters on the current page. The core font is preloaded with the same URL used
-by the generated CSS. Ghost Search loads after the first search action, while the
-comments UI loads only when its section is within 800px of the viewport.
+Run `server/sync-fonts.sh` on production before pushing a rebuilt font manifest.
+The deployment workflow refuses to activate a theme whose persistent manifest is
+not already live. `make dev` performs the equivalent local sync automatically.
+CSS `unicode-range` selects only the files needed by the characters on the current
+page, while the core font is preloaded with the same URL used by the generated
+CSS. Ghost Search loads after the first search action, while the comments UI loads
+only when its section is within 800px of the viewport.
 
 ## Turnstile-protected member signup
 
@@ -312,9 +317,9 @@ ssh tencent-cloud 'bash /home/ubuntu/ghost-blog/server/bootstrap.sh'
 
 Ghost and MySQL images are pinned by multi-platform digest. On an existing
 installation, `bootstrap.sh` creates and verifies a backup before pulling images,
-then waits for the Ghost health check instead of treating a started container as a
-successful deployment. Update the tags and digests deliberately in the same
-reviewed change.
+atomically syncs the persistent fallback fonts, then waits for the Ghost health
+check instead of treating a started container as a successful deployment. Update
+the tags and digests deliberately in the same reviewed change.
 
 During staging, Ghost is only exposed on remote `127.0.0.1:2368`. Preview it
 through an SSH tunnel:
@@ -375,7 +380,8 @@ and restores it automatically if the restart or health check fails.
 
 `server/backup.sh` creates and verifies a compressed MySQL dump and content archive,
 keeps local copies for 14 days, and writes files with owner-only permissions. Runtime
-logs and the transient theme rollback directory are excluded from the content archive.
+logs, generated persistent font shards, and the transient theme rollback directory
+are excluded from the content archive.
 The included systemd timer runs daily around 03:20 Asia/Shanghai.
 
 For an encrypted offsite copy, install Restic on the server, create a password file

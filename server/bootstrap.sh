@@ -21,6 +21,8 @@ fi
 
 chmod 600 "$install_dir/.env"
 
+"$install_dir/server/sync-fonts.sh" "$install_dir"
+
 if [[ "$(docker inspect --format '{{.State.Running}}' somnus-ghost 2>/dev/null || true)" == "true" ]]; then
   if [[ ! -x "$install_dir/server/backup.sh" ]]; then
     echo "refusing to upgrade a running installation without server/backup.sh" >&2

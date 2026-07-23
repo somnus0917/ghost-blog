@@ -7,7 +7,9 @@ on:
       - "scripts/build_theme.py"
       - "scripts/build_webfont.mjs"
       - "scripts/check_theme.py"
+      - "shared/fonts/lxgw-wenkai-v2/**"
       - "server/deploy-theme.sh"
+      - "server/sync-fonts.sh"
       - "package.json"
       - "package-lock.json"
       - "requirements-fonts.txt"
@@ -20,7 +22,9 @@ on:
       - "scripts/build_theme.py"
       - "scripts/build_webfont.mjs"
       - "scripts/check_theme.py"
+      - "shared/fonts/lxgw-wenkai-v2/**"
       - "server/deploy-theme.sh"
+      - "server/sync-fonts.sh"
       - "package.json"
       - "package-lock.json"
       - "requirements-fonts.txt"
@@ -71,6 +75,20 @@ jobs:
         if: env.GHOST_ADMIN_API_KEY == ''
         run: |
           echo "Theme validation passed; deployment is waiting for GHOST_ADMIN_API_KEY."
+      - name: Verify persistent fallback fonts
+        if: env.GHOST_ADMIN_API_KEY != ''
+        run: |
+          remote_manifest="$RUNNER_TEMP/lxgw-wenkai-v2-manifest.json"
+          curl --fail --silent --show-error \
+            --retry 5 --retry-all-errors \
+            -H "Cache-Control: no-cache" \
+            "https://blog.somnus.wiki/content/images/fonts/lxgw-wenkai-v2/manifest.json?v=${GITHUB_SHA}" \
+            --output "$remote_manifest"
+          if ! cmp --silent shared/fonts/lxgw-wenkai-v2/manifest.json "$remote_manifest"; then
+            echo "Production fallback fonts do not match this theme build." >&2
+            echo "Run server/sync-fonts.sh before deploying the theme." >&2
+            exit 1
+          fi
       - name: Deploy through the Ghost Admin API
         if: env.GHOST_ADMIN_API_KEY != ''
         uses: TryGhost/action-deploy-theme@b1ff2a5eeac1d5438a0aab35eb996fe4010d889e # v2.0.4

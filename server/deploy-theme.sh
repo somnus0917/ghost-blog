@@ -8,6 +8,7 @@ active="$themes_dir/somnus-yohaku"
 previous="$themes_dir/.somnus-yohaku.previous"
 
 test -f "$archive"
+"$install_dir/server/sync-fonts.sh" "$install_dir"
 mkdir -p "$themes_dir"
 staging="$(mktemp -d "$themes_dir/.somnus-yohaku.XXXXXX")"
 

@@ -4,6 +4,7 @@ import {fontSplit} from "cn-font-split";
 import {
   cpSync,
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
@@ -26,6 +27,11 @@ const OUTPUT_DIR = join(
   REPO_ROOT,
   "theme/somnus-yohaku/assets/fonts/lxgw-wenkai-v2"
 );
+const FALLBACK_OUTPUT_DIR = join(
+  REPO_ROOT,
+  "shared/fonts/lxgw-wenkai-v2"
+);
+const FALLBACK_PUBLIC_URL = "/content/images/fonts/lxgw-wenkai-v2";
 const DEFAULT_CORPUS_URL = "https://blog.somnus.wiki/llms-full.txt";
 const LOCAL_TEXT_ROOTS = [
   join(REPO_ROOT, "theme/somnus-yohaku"),
@@ -178,6 +184,13 @@ function referencedFontNames(css) {
   );
 }
 
+function persistentFallbackCss(css) {
+  return css.replace(
+    /url\("\.\/(LXGWWenKai-Fallback-v2-[^"]+\.woff2)"\)/g,
+    (_match, name) => `url("${FALLBACK_PUBLIC_URL}/${name}")`
+  );
+}
+
 function readFontCodePoints(fontPath) {
   const python = existsSync(LOCAL_PYFTSUBSET)
     ? join(REPO_ROOT, ".venv-fonts/bin/python")
@@ -227,10 +240,13 @@ async function main() {
   const temporaryRoot = mkdtempSync(join(tmpdir(), "somnus-webfont-v2-"));
   const coreDir = join(temporaryRoot, "core");
   const fallbackDir = join(temporaryRoot, "fallback");
-  const assembledDir = join(temporaryRoot, basename(OUTPUT_DIR));
+  const assembledThemeDir = join(temporaryRoot, "theme-fonts");
+  const assembledFallbackDir = join(temporaryRoot, "persistent-fonts");
   const input = new Uint8Array(readFileSync(SOURCE_FONT));
 
   try {
+    mkdirSync(assembledThemeDir);
+    mkdirSync(assembledFallbackDir);
     await fontSplit({
       input,
       outDir: coreDir,
@@ -315,13 +331,17 @@ async function main() {
       throw new Error(`expected complete fallback shards, got ${generatedFallbackFonts.length}`);
     }
 
-    cpSync(fallbackDir, assembledDir, {recursive: true});
-    cpSync(join(coreDir, coreFonts[0]), join(assembledDir, coreFonts[0]));
-    cpSync(SOURCE_LICENSE, join(assembledDir, "OFL.txt"));
+    cpSync(
+      join(coreDir, coreFonts[0]),
+      join(assembledThemeDir, coreFonts[0])
+    );
+    cpSync(SOURCE_LICENSE, join(assembledThemeDir, "OFL.txt"));
 
-    const fallbackCss = excludeCodePointsFromFontCss(
-      readFileSync(join(fallbackDir, "font.css"), "utf8").trim(),
-      coreFontCodePoints
+    const fallbackCss = persistentFallbackCss(
+      excludeCodePointsFromFontCss(
+        readFileSync(join(fallbackDir, "font.css"), "utf8").trim(),
+        coreFontCodePoints
+      )
     );
     const coreCss = coreFontCss(coreFonts[0], coreFontCodePoints);
     if (!fallbackCss.includes("unicode-range:") || !coreCss.includes("unicode-range:")) {
@@ -331,16 +351,14 @@ async function main() {
     const fallbackFonts = generatedFallbackFonts.filter((name) =>
       referencedFallbackFonts.has(name)
     );
-    for (const name of generatedFallbackFonts) {
-      if (!referencedFallbackFonts.has(name)) {
-        rmSync(join(assembledDir, name));
-      }
+    for (const name of fallbackFonts) {
+      cpSync(join(fallbackDir, name), join(assembledFallbackDir, name));
     }
     if (fallbackFonts.length < 20) {
       throw new Error(`expected complete non-core fallback shards, got ${fallbackFonts.length}`);
     }
     writeFileSync(
-      join(assembledDir, "font.css"),
+      join(assembledThemeDir, "font.css"),
       [
         "/* Complete LXGW WenKai Unicode shards. Core site glyphs are last so they win overlaps. */",
         fallbackCss,
@@ -350,9 +368,9 @@ async function main() {
       "utf8"
     );
 
-    const coreBytes = statSync(join(assembledDir, coreFonts[0])).size;
+    const coreBytes = statSync(join(assembledThemeDir, coreFonts[0])).size;
     const fallbackBytes = fallbackFonts.reduce(
-      (total, name) => total + statSync(join(assembledDir, name)).size,
+      (total, name) => total + statSync(join(assembledFallbackDir, name)).size,
       0
     );
     const manifest = {
@@ -364,18 +382,26 @@ async function main() {
       coreCodePointCount: coreFontCodePoints.length,
       coreFile: coreFonts[0],
       coreBytes,
+      fallbackBaseUrl: FALLBACK_PUBLIC_URL,
       fallbackFileCount: fallbackFonts.length,
       fallbackBytes,
       totalFontBytes: coreBytes + fallbackBytes
     };
     writeFileSync(
-      join(assembledDir, "manifest.json"),
+      join(assembledThemeDir, "manifest.json"),
+      `${JSON.stringify(manifest, null, 2)}\n`,
+      "utf8"
+    );
+    writeFileSync(
+      join(assembledFallbackDir, "manifest.json"),
       `${JSON.stringify(manifest, null, 2)}\n`,
       "utf8"
     );
 
     rmSync(OUTPUT_DIR, {recursive: true, force: true});
-    renameSync(assembledDir, OUTPUT_DIR);
+    renameSync(assembledThemeDir, OUTPUT_DIR);
+    rmSync(FALLBACK_OUTPUT_DIR, {recursive: true, force: true});
+    renameSync(assembledFallbackDir, FALLBACK_OUTPUT_DIR);
     console.log(
       `built complete webfont: ${coreFontCodePoints.length} supported core code points `
       + `from ${coreCodePoints.length} corpus code points, ${Math.round(coreBytes / 1024)} KiB core, `

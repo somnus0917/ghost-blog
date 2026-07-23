@@ -18,12 +18,13 @@ The main design tokens are at the top of `screen.css`. Change `--paper`, `--ink`
 ## Typography
 
 The site self-hosts the official LXGW WenKai Regular web font at
-`shared/fonts/LXGWWenKai-Regular.woff2`. Production pages load the versioned
-`assets/fonts/lxgw-wenkai-v2/` webfont bundle embedded in the theme. The bundle has
-two layers: a roughly 0.4 MiB core containing current public content and interface
-copy, plus complete `unicode-range` fallback shards for the rest of LXGW WenKai.
-Normal pages only fetch the core. A new or rare character fetches the matching
-small shard from the same font family, so it does not switch to a system font.
+`shared/fonts/LXGWWenKai-Regular.woff2`. The theme embeds a roughly 0.4 MiB core
+containing current public content and interface copy. Complete `unicode-range`
+fallback shards for the rest of LXGW WenKai are versioned in
+`shared/fonts/lxgw-wenkai-v2/` and served persistently from
+`/content/images/fonts/lxgw-wenkai-v2/`. Normal pages only fetch the core. A new or
+rare character fetches the matching small shard from the same font family, so it
+does not switch to a system font.
 `font-display: swap` keeps text visible while a requested shard loads. The original
 SIL Open Font License is included in the bundle.
 
@@ -38,8 +39,10 @@ make font
 make check
 ```
 
-The full bundle makes the deployable theme larger, but CSS `unicode-range` prevents
-a browser from downloading all shards for one page.
+`make dev` syncs the persistent shards into local Ghost. Production must run
+`server/sync-fonts.sh` before a rebuilt font manifest is deployed; CI verifies this
+manifest match. Keeping the shards outside the Admin API theme archive prevents
+large uploads while CSS `unicode-range` still avoids downloading unused shards.
 
 The quickest way to change the site's font size is to edit these variables near the
 top of `assets/css/screen.css`:

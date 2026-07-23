@@ -15,7 +15,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 THEME_ROOT = REPO_ROOT / "theme" / "somnus-yohaku"
 SHARED_FONT = REPO_ROOT / "shared" / "fonts" / "LXGWWenKai-Regular.woff2"
 WEB_FONT_DIR = THEME_ROOT / "assets" / "fonts" / "lxgw-wenkai-v2"
+FALLBACK_FONT_DIR = REPO_ROOT / "shared" / "fonts" / "lxgw-wenkai-v2"
 FONT_MANIFEST = WEB_FONT_DIR / "manifest.json"
+FALLBACK_FONT_MANIFEST = FALLBACK_FONT_DIR / "manifest.json"
+FALLBACK_PUBLIC_URL = "/content/images/fonts/lxgw-wenkai-v2"
 ARCHIVE = REPO_ROOT / "build" / "somnus-yohaku.zip"
 WORKER_ROOT = REPO_ROOT / "worker"
 REQUIRED = {
@@ -85,9 +88,15 @@ def main() -> int:
         fail(f"missing shared web font: {SHARED_FONT}")
     if not FONT_MANIFEST.is_file():
         fail(f"missing webfont manifest: {FONT_MANIFEST}")
+    if not FALLBACK_FONT_MANIFEST.is_file():
+        fail(f"missing persistent webfont manifest: {FALLBACK_FONT_MANIFEST}")
+    if FONT_MANIFEST.read_bytes() != FALLBACK_FONT_MANIFEST.read_bytes():
+        fail("theme and persistent webfont manifests must be identical")
     manifest = json.loads(FONT_MANIFEST.read_text(encoding="utf-8"))
     if manifest.get("schema") != 1:
         fail("webfont manifest schema must be 1")
+    if manifest.get("fallbackBaseUrl") != FALLBACK_PUBLIC_URL:
+        fail("webfont manifest must use the persistent fallback font URL")
     core_file = str(manifest.get("coreFile", ""))
     core_font = WEB_FONT_DIR / core_file
     if not core_file or not core_font.is_file():
@@ -113,14 +122,20 @@ def main() -> int:
             fail("every generated font face must declare a file and unicode-range")
         points = parse_unicode_range(range_match.group(1))
         if Path(file_match.group(1)).name == core_file:
+            if file_match.group(1) != f"./{core_file}":
+                fail("core webfont must remain inside the theme bundle")
             core_css_points.update(points)
         else:
+            if not file_match.group(1).startswith(f"{FALLBACK_PUBLIC_URL}/"):
+                fail("fallback webfonts must use the persistent content URL")
             fallback_css_points.update(points)
     if not core_css_points or not fallback_css_points:
         fail("webfont stylesheet must include both core and fallback ranges")
     if core_css_points & fallback_css_points:
         fail("core and fallback unicode ranges must be disjoint")
-    fallback_fonts = sorted(WEB_FONT_DIR.glob("LXGWWenKai-Fallback-v2-*.woff2"))
+    fallback_fonts = sorted(
+        FALLBACK_FONT_DIR.glob("LXGWWenKai-Fallback-v2-*.woff2")
+    )
     if len(fallback_fonts) < 100:
         fail("complete webfont fallback shard set is missing")
     if manifest.get("fallbackFileCount") != len(fallback_fonts):
@@ -210,19 +225,19 @@ def main() -> int:
         if "assets/fonts/MapleMono-NF-CN-Regular.woff2" in names:
             fail("unused Maple Mono font must not be shipped")
         archive_fonts = {name for name in names if name.endswith(".woff2")}
-        expected_fonts = {
-            f"assets/fonts/lxgw-wenkai-v2/{name}"
-            for name in actual_font_names
-        }
+        expected_fonts = {f"assets/fonts/lxgw-wenkai-v2/{core_font.name}"}
         if archive_fonts != expected_fonts:
-            fail("archive font inventory does not match the validated Unicode shards")
+            fail("archive must contain the core font but no persistent fallback shards")
         bad = [name for name in names if name.startswith("/") or ".." in Path(name).parts]
         if bad:
             fail("archive contains unsafe paths")
     size_mib = ARCHIVE.stat().st_size / (1024 * 1024)
-    if size_mib > 20:
+    if size_mib > 5:
         fail(f"archive is unexpectedly large: {size_mib:.1f} MiB")
-    print(f"theme check passed: {len(names)} files, {size_mib:.1f} MiB")
+    print(
+        f"theme check passed: {len(names)} files, {size_mib:.1f} MiB; "
+        f"{len(fallback_fonts)} persistent font shards"
+    )
     return 0
 
 

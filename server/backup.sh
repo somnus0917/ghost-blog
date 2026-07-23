@@ -31,6 +31,7 @@ docker exec -e MYSQL_PWD="$MYSQL_PASSWORD" somnus-ghost-mysql mysqldump \
 
 tar -C "$install_dir" -czf "$content_backup" \
   --exclude="content/logs" \
+  --exclude="content/images/fonts/lxgw-wenkai-v2" \
   --exclude="content/themes/.somnus-yohaku.previous" \
   content
 gzip -t "$database_backup"

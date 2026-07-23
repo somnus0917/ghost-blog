@@ -1,6 +1,8 @@
 PYTHON ?= python3
 THEME := theme/somnus-yohaku
 LOCAL_THEME := content/themes/somnus-yohaku
+PERSISTENT_FONTS := shared/fonts/lxgw-wenkai-v2
+LOCAL_FONTS := content/images/fonts/lxgw-wenkai-v2
 LOCAL_PORT ?= 2369
 LOCAL_URL ?= http://127.0.0.1:$(LOCAL_PORT)
 
@@ -26,6 +28,8 @@ check: theme
 dev:
 	mkdir -p $(LOCAL_THEME)
 	rsync -a --delete $(THEME)/ $(LOCAL_THEME)/
+	mkdir -p $(LOCAL_FONTS)
+	rsync -a --delete $(PERSISTENT_FONTS)/ $(LOCAL_FONTS)/
 	mkdir -p content/settings
 	rsync -a routes.yaml content/settings/routes.yaml
 	docker network inspect proxy >/dev/null 2>&1 || docker network create proxy
