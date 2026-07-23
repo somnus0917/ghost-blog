@@ -1,0 +1,54 @@
+{{!< default}}
+
+{{#post}}
+<article class="article-shell page-shell latex-page {{post_class}}">
+    <header class="article-header">
+        <p class="article-eyebrow">LATEX</p>
+        <h1>{{title}}</h1>
+        {{#if custom_excerpt}}
+            <p class="page-excerpt">{{custom_excerpt}}</p>
+        {{/if}}
+    </header>
+
+    <section class="latex-live-editor" data-latex-editor>
+        <div class="latex-editor-pane">
+            <div class="latex-editor-label">
+                <span>输入</span>
+                <small>支持文字与 LaTeX 混排</small>
+            </div>
+
+            <textarea
+                data-latex-input
+                spellcheck="false"
+                aria-label="LaTeX 输入"
+            >当 $a \ne 0$ 时，一元二次方程的根为：
+
+$$x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}.$$</textarea>
+        </div>
+
+        <div class="latex-preview-pane">
+            <div class="latex-editor-label">
+                <span>预览</span>
+                <small data-latex-status>即时渲染</small>
+            </div>
+
+            <div
+                class="latex-preview"
+                data-latex-preview
+                aria-live="polite"
+            ></div>
+        </div>
+    </section>
+
+    <p class="latex-editor-help">
+        行内公式使用 <code>$...$</code> 或 <code>\(...\)</code>；
+        独立公式使用 <code>$$...$$</code> 或 <code>\[...\]</code>。
+    </p>
+
+    <div class="article-content gh-content">
+        {{content}}
+    </div>
+</article>
+
+<script src="{{asset "js/latex-editor.js"}}"></script>
+{{/post}}

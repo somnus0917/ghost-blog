@@ -112,6 +112,11 @@ video {
   max-width: 100%;
 }
 
+/* Keep inline MathJax SVG formulas in the surrounding text flow. */
+mjx-container[jax="SVG"]:not([display="true"]) > svg {
+  display: inline;
+}
+
 ::selection {
   color: var(--ink);
   background: var(--accent-soft);
@@ -2350,4 +2355,105 @@ video {
   .signup-card {
     padding: 22px;
   }
+}
+
+/* LaTeX live editor */
+
+.latex-page {
+    width: min(1100px, calc(100vw - 48px));
+}
+
+.latex-page .article-header,
+.latex-page .article-content {
+    width: var(--article);
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.latex-live-editor {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    overflow: hidden;
+    margin-bottom: 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--paper-raised);
+    box-shadow: var(--shadow);
+}
+
+.latex-editor-pane,
+.latex-preview-pane {
+    min-width: 0;
+}
+
+.latex-editor-pane {
+    border-right: 1px solid var(--line);
+}
+
+.latex-editor-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 44px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink-soft);
+    font-size: var(--type-small);
+}
+
+.latex-editor-label small {
+    color: var(--ink-faint);
+}
+
+.latex-editor-pane textarea {
+    display: block;
+    width: 100%;
+    min-height: 340px;
+    padding: 18px;
+    resize: vertical;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.75;
+}
+
+.latex-editor-pane textarea:focus {
+    background: var(--paper-soft);
+}
+
+.latex-preview {
+    min-height: 340px;
+    overflow: auto;
+    padding: 18px;
+    color: var(--ink);
+    line-height: 1.75;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.latex-editor-help {
+    width: var(--article);
+    margin: 0 auto 64px;
+    color: var(--ink-faint);
+    font-size: var(--type-small);
+}
+
+@media (max-width: 760px) {
+    .latex-live-editor {
+        grid-template-columns: 1fr;
+    }
+
+    .latex-editor-pane {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .latex-editor-pane textarea,
+    .latex-preview {
+        min-height: 240px;
+    }
 }
