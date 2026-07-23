@@ -3,7 +3,7 @@
 本项目把文章互动拆成两个边界清晰的服务：
 
 - Ghost 6 官方 Analytics + Tinybird：采集页面访问并计算单篇文章累计阅读数。
-- Cloudflare Worker + D1：向主题提供安全的公开查询、点赞和 45 秒在线心跳。
+- Cloudflare Worker + D1：向主题提供安全的公开查询、点赞和 75 秒在线状态窗口。
 
 浏览器只访问同源的 `/api/engagement/*`，Caddy 将该路径代理到 Worker 自定义域名 `engagement.somnus.wiki`，并注入只有 Caddy 和 Worker 知道的代理凭证。Tinybird 管理令牌、访客签名盐和代理凭证只能保存为服务端密钥，不能写进主题、Git 或浏览器代码。
 
@@ -84,11 +84,12 @@ Ghost 部署 Tinybird 数据文件后，会创建名为 `stats_page` 的只读 T
 cd worker
 npx wrangler secret put TINYBIRD_STATS_TOKEN
 npx wrangler secret put VISITOR_HASH_SALT
+npx wrangler secret put VISITOR_COOKIE_SECRET
 npx wrangler secret put WORKER_PROXY_SECRET
 ```
 
-`VISITOR_HASH_SALT` 和 `WORKER_PROXY_SECRET` 必须使用两个不同的新随机值，
-并且至少 32 个字符。例如分别运行两次：
+`VISITOR_HASH_SALT`、`VISITOR_COOKIE_SECRET` 和 `WORKER_PROXY_SECRET`
+必须使用三个不同的新随机值，并且至少 32 个字符。例如分别运行三次：
 
 ```bash
 openssl rand -hex 32
@@ -110,7 +111,8 @@ npx wrangler deploy
 ```
 
 示例配置还包含两组 Cloudflare Rate Limiting 绑定：互动接口每个访客每分钟
-30 次，注册接口每个邮箱每分钟 5 次。部署需要 Wrangler 4.36 或更新版本。
+ 30 次，注册接口每个邮箱每分钟 5 次。部署使用固定版本的 Wrangler，
+避免不同设备部署出不同结果。
 `namespace_id` 只需在同一账号内保持唯一；如果 `91017` 或 `91018` 已被其他
 Worker 使用，请换成另外两个数字，并把同样的值写入实际
 `worker/wrangler.toml`。
@@ -135,11 +137,13 @@ handle /api/engagement/* {
 GET  /api/engagement/:post_uuid
 POST /api/engagement/:post_uuid/presence
 POST /api/engagement/:post_uuid/like
+GET  /api/engagement/health
 ```
 
 - 阅读量来自 Ghost 官方 Tinybird `api_post_visitor_counts` Pipe。
-- 在线人数只统计最近 45 秒仍在发送心跳的浏览器会话。
+- 在线人数只统计最近 75 秒仍在发送心跳的浏览器会话；主题每 30 秒更新一次。
 - Worker 生成并验证带 HMAC 签名的 HttpOnly Cookie，不信任请求 JSON 中的访客 ID。
+- Cookie 签名与数据库哈希使用不同密钥；旧版 `X-Like-Visitor` 请求头不再影响身份。
 - Worker 只把签名身份和可信客户端 IP 做加盐哈希后用于限流；D1 不保存
   Cookie、原始 ID、邮箱或 IP 地址。
 - Worker 限制网页来源为 `https://blog.somnus.wiki`。

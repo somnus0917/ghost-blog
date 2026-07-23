@@ -1,0 +1,90 @@
+name: Production infrastructure CI/CD
+
+on:
+  pull_request:
+    paths:
+      - "worker/**"
+      - "server/install-caddy-blog.sh"
+      - "server/smoke-production.sh"
+      - "Caddyfile.snippet"
+      - ".github/workflows/production-cicd.yml"
+  push:
+    branches: [main]
+    paths:
+      - "worker/**"
+      - "server/install-caddy-blog.sh"
+      - "server/smoke-production.sh"
+      - "Caddyfile.snippet"
+      - ".github/workflows/production-cicd.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-infrastructure
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Run project checks
+        run: make check
+
+  deploy-edge:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      PRODUCTION_SSH_HOST: ${{ secrets.PRODUCTION_SSH_HOST }}
+      PRODUCTION_SSH_USER: ${{ secrets.PRODUCTION_SSH_USER }}
+      PRODUCTION_SSH_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
+      PRODUCTION_SSH_KNOWN_HOSTS: ${{ secrets.PRODUCTION_SSH_KNOWN_HOSTS }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Explain pending edge credentials
+        if: env.PRODUCTION_SSH_HOST == '' || env.PRODUCTION_SSH_USER == '' || env.PRODUCTION_SSH_KEY == '' || env.PRODUCTION_SSH_KNOWN_HOSTS == ''
+        run: echo "Validation passed; edge deployment is waiting for the production SSH secrets."
+      - name: Configure SSH
+        if: env.PRODUCTION_SSH_HOST != '' && env.PRODUCTION_SSH_USER != '' && env.PRODUCTION_SSH_KEY != '' && env.PRODUCTION_SSH_KNOWN_HOSTS != ''
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$PRODUCTION_SSH_KEY" > ~/.ssh/production
+          printf '%s\n' "$PRODUCTION_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/production
+          chmod 600 ~/.ssh/known_hosts
+      - name: Install and validate the blog Caddy block
+        if: env.PRODUCTION_SSH_HOST != '' && env.PRODUCTION_SSH_USER != '' && env.PRODUCTION_SSH_KEY != '' && env.PRODUCTION_SSH_KNOWN_HOSTS != ''
+        run: |
+          remote="$PRODUCTION_SSH_USER@$PRODUCTION_SSH_HOST"
+          scp -i ~/.ssh/production Caddyfile.snippet server/install-caddy-blog.sh "$remote:/tmp/"
+          ssh -i ~/.ssh/production "$remote" \
+            "bash /tmp/install-caddy-blog.sh /home/ubuntu/caddy/Caddyfile /tmp/Caddyfile.snippet edge-caddy"
+
+  deploy-worker:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: deploy-edge
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: b4749c86984f7a88f573e4e307834846
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Explain pending Cloudflare credentials
+        if: env.CLOUDFLARE_API_TOKEN == ''
+        run: echo "Edge validation passed; Worker deployment is waiting for CLOUDFLARE_API_TOKEN."
+      - name: Apply D1 migrations
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        working-directory: worker
+        run: npx --yes wrangler@4.113.0 d1 migrations apply somnus-blog-engagement --remote
+      - name: Deploy Worker
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        working-directory: worker
+        run: npx --yes wrangler@4.113.0 deploy
+      - name: Verify production contract
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        run: bash server/smoke-production.sh

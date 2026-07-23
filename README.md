@@ -132,28 +132,51 @@ git push origin main
 
 - `theme/**` 等主题相关修改会触发 GitHub Actions，验证通过后通过
   Ghost Admin API 自动部署到线上。
+- `worker/**` 或 `Caddyfile.snippet` 修改会触发生产基础设施工作流：
+  先部署并验证 Caddy 博客配置块，再应用 D1 migration、部署 Worker，
+  最后运行完整生产冒烟测试。
 - GitHub Actions 的 `GHOST_ADMIN_API_URL` 和 `GHOST_ADMIN_API_KEY`
   保存在 GitHub 仓库 Secrets 中，新设备不需要复制。
 - 文章、Page 和会员数据不会被主题部署覆盖。
 
 在 GitHub 仓库的 Actions 页面确认部署成功后，再检查线上页面。
 
-### 5. 不会自动部署的修改
+### 5. 自动部署凭证与仍需手工处理的修改
 
-`git push` 只会自动部署工作流中声明的主题相关文件。以下修改需要额外操作：
+生产基础设施工作流需要在 GitHub `production` Environment 配置：
+
+```text
+CLOUDFLARE_API_TOKEN
+PRODUCTION_SSH_HOST
+PRODUCTION_SSH_USER
+PRODUCTION_SSH_KEY
+PRODUCTION_SSH_KNOWN_HOSTS
+```
+
+缺少凭证时，工作流仍会完成验证并明确提示部署处于等待状态，不会尝试使用
+空密钥。Cloudflare Token 只授予目标账号的 Worker、D1 和路由部署权限；
+SSH 使用单独的部署密钥。以下修改仍需要额外操作：
 
 - `routes.yaml`：需要上传到 Ghost Admin 的 Routes 设置，或同步到腾讯云并重启
   Ghost；只 push 不会更新线上路由。
-- `worker/**`：需要在 `worker/` 目录完成 Wrangler 登录和配置后运行
-  D1 migration 和 `npx wrangler deploy`；GitHub Actions 会验证但不会自动部署。
 - `shared/fonts/lxgw-wenkai-v2/**`：重新构建字体后，需要先运行生产服务器上的
   `server/sync-fonts.sh`；CI 会在主题部署前核对线上字体清单。
-- `server/**`、`docker-compose.yml`、生产 `.env`：需要通过 SSH/rsync 同步到
-  腾讯云并按部署文档执行。
+- `server/**` 中除博客 Caddy 安装脚本以外的文件、`docker-compose.yml` 和
+  生产 `.env`：需要通过 SSH/rsync 同步到腾讯云并按部署文档执行。
 - Ghost 文章和 Page：直接在 Ghost Admin 编辑，不通过 Git 部署。
 
-`worker/wrangler.toml`、`.env`、`.private/`、`.wrangler/`、`content/` 和
-`mysql/` 已被 `.gitignore` 排除。不要为了方便跨设备而取消这些忽略规则。
+`worker/wrangler.toml` 只保存可公开的绑定 ID 和变量，已纳入版本控制；
+Worker Secret 仍只保存在 Cloudflare。`.env`、`.private/`、`.wrangler/`、
+`content/` 和 `mysql/` 已被 `.gitignore` 排除，不要取消这些忽略规则。
+
+部署后也可以从任意维护设备运行：
+
+```bash
+make smoke
+```
+
+它会验证安全响应头、Worker 协议版本、签名 Cookie 和在线状态接口，不会修改
+点赞、文章、会员或其他持久业务数据。
 
 ### 6. 结束本地开发
 
@@ -245,6 +268,7 @@ cd worker
 npx wrangler secret put TURNSTILE_SECRET
 npx wrangler secret put MEMBERS_PROXY_SECRET
 npx wrangler secret put VISITOR_HASH_SALT
+npx wrangler secret put VISITOR_COOKIE_SECRET
 npx wrangler secret put WORKER_PROXY_SECRET
 ```
 
@@ -253,11 +277,12 @@ container environment. Caddy intercepts `/members/api/send-magic-link/` so
 signup and subscribe requests cannot bypass Turnstile. Existing-member sign-in
 still uses Ghost's normal passwordless flow.
 
-`WORKER_PROXY_SECRET` must be a different random value of at least 32 characters,
-configured both as a Wrangler secret and in Caddy's environment. The Worker
-rejects direct requests that do not carry this Caddy-injected credential. It also
-uses `VISITOR_HASH_SALT` to sign an HttpOnly visitor cookie, so engagement identity
-is no longer trusted from request JSON. On the first request it can sign the
+`WORKER_PROXY_SECRET`, `VISITOR_HASH_SALT`, and `VISITOR_COOKIE_SECRET` must be
+three different random values of at least 32 characters. Configure the proxy
+secret both in Wrangler and in Caddy's environment. The Worker rejects direct
+requests that do not carry this Caddy-injected credential. It uses the dedicated
+cookie secret to sign an HttpOnly visitor cookie, so engagement identity is no
+longer trusted from request JSON. On the first request it can sign the
 existing local like ID once, preserving each reader's current liked state during
 the migration. Never commit any of these secrets, and do not rotate an existing
 `VISITOR_HASH_SALT` during this rollout.
