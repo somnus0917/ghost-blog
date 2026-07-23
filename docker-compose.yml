@@ -1,8 +1,15 @@
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   ghost:
-    image: ghost:6-alpine
+    image: ghost:6-alpine@sha256:63b12cb176ffe9cfe651b839c18f6c7261004370f566d9ae218cacd67766b2b1
     container_name: somnus-ghost
     restart: unless-stopped
+    logging: *default-logging
     depends_on:
       mysql:
         condition: service_healthy
@@ -39,6 +46,16 @@ services:
       mail__options__auth__pass: ${SMTP_PASS}
     ports:
       - "127.0.0.1:${GHOST_BIND_PORT:-2368}:2368"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "require('http').get('http://127.0.0.1:2368/', (response) => process.exit(response.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
     volumes:
       - ./content:/var/lib/ghost/content
     networks:
@@ -49,6 +66,7 @@ services:
     image: ghost/traffic-analytics:1.0.300@sha256:12085536b6c8d3284d92eeca64385760d9a9391e1ba7a1fcc017756286d002b4
     container_name: somnus-traffic-analytics
     restart: unless-stopped
+    logging: *default-logging
     expose:
       - "3000"
     volumes:
@@ -82,7 +100,7 @@ services:
     restart: "no"
 
   tinybird-sync:
-    image: ghost:6-alpine
+    image: ghost:6-alpine@sha256:63b12cb176ffe9cfe651b839c18f6c7261004370f566d9ae218cacd67766b2b1
     command: >
       sh -c "
         if [ -d /var/lib/ghost/current/core/server/data/tinybird ]; then
@@ -124,9 +142,10 @@ services:
     restart: "no"
 
   mysql:
-    image: mysql:8.0
+    image: mysql:8.0@sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b
     container_name: somnus-ghost-mysql
     restart: unless-stopped
+    logging: *default-logging
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}

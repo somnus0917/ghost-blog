@@ -10,7 +10,7 @@
 后台地址：<https://blog.somnus.wiki/ghost/#/signin>
 
 Owner 邮箱是 `mailmeblog@somnus.wiki`。随机初始密码仅保存在部署电脑的
-`../.private/ghost-owner.json`，该文件权限为 `0600`，不会提交到 Git。
+`.private/ghost-owner.json`，该文件权限为 `0600`，不会提交到 Git。
 
 首次登录后，建议在左下角头像菜单中进入个人设置，换成自己容易保管的强密码。
 
@@ -46,4 +46,21 @@ docker compose ps
 docker compose logs -f ghost
 ```
 
-每日备份由 `ghost-blog-backup.timer` 执行，备份目录为 `/home/ubuntu/ghost-blog/backups`，默认保留 14 天。
+每日备份由 `ghost-blog-backup.timer` 执行，备份目录为
+`/home/ubuntu/ghost-blog/backups`，默认保留 14 天。若 `.env` 已配置 Restic，
+同一任务还会把加密备份发送到异地仓库，并保留 14 个日备份、8 个周备份和
+12 个月备份。运行日志与临时主题回滚目录不会写入内容归档。应定期运行
+`restic snapshots`，并至少每季度恢复到临时目录验证一次。
+
+## 发布前隐私检查
+
+日记、课程材料和论文记录尤其要检查姓名、学号、手机号、住址、私人邮箱和原始
+附件文件名。已知的 `2026-05-21` 日记可以在持有本机 Owner 凭据的设备上执行：
+
+```bash
+python3 scripts/redact_public_pii.py
+python3 scripts/redact_public_pii.py --apply
+```
+
+第一条只报告会处理的字段；第二条先在 `.private/redaction-backups/` 保存
+权限为 `0600` 的原文备份，再更新线上文章。

@@ -145,7 +145,7 @@ git push origin main
 - `routes.yaml`：需要上传到 Ghost Admin 的 Routes 设置，或同步到腾讯云并重启
   Ghost；只 push 不会更新线上路由。
 - `worker/**`：需要在 `worker/` 目录完成 Wrangler 登录和配置后运行
-  `npx wrangler deploy`。
+  D1 migration 和 `npx wrangler deploy`；GitHub Actions 会验证但不会自动部署。
 - `server/**`、`docker-compose.yml`、生产 `.env`：需要通过 SSH/rsync 同步到
   腾讯云并按部署文档执行。
 - Ghost 文章和 Page：直接在 Ghost Admin 编辑，不通过 Git 部署。
@@ -207,33 +207,81 @@ API key to disk or command output. Run it again with
 posts to the repository versions.
 
 The theme self-hosts LXGW WenKai in WOFF2 format. The upstream OFL license is
-included in `shared/fonts/OFL.txt`. The font is installed once into Ghost's persistent
-`content/images/fonts/` directory, keeping routine theme deployments small and fast.
+included in `shared/fonts/OFL.txt`. The theme ships a roughly 0.4 MiB core built from
+the public article corpus and interface copy, followed by complete `unicode-range`
+shards for all remaining characters supported by the source font. A normal page
+only fetches the core; a new or rare character fetches its matching LXGW WenKai
+shard instead of falling back to a visibly different system font. To refresh the
+core and the deterministic full shard set:
+
+```bash
+npm install
+python3 -m venv .venv-fonts
+.venv-fonts/bin/pip install -r requirements-fonts.txt
+npm run build:font
+make check
+```
+
+The deployable theme contains the complete font inventory, but browsers do not
+download every shard: CSS `unicode-range` selects only the files needed by the
+characters on the current page. The core font is preloaded with the same URL used
+by the generated CSS. Ghost Search loads after the first search action, while the
+comments UI loads only when its section is within 800px of the viewport.
 
 ## Turnstile-protected member signup
 
 The `/signup/` route uses Cloudflare Turnstile before Ghost sends a membership
 magic link. The public site key lives in `theme/somnus-yohaku/signup.hbs`.
-The private Turnstile key and the private Caddy-to-Worker forwarding key are
-stored only as runtime secrets:
+The private Turnstile key and both private proxy keys are stored only as runtime
+secrets:
 
 ```bash
 cd worker
 npx wrangler secret put TURNSTILE_SECRET
 npx wrangler secret put MEMBERS_PROXY_SECRET
+npx wrangler secret put VISITOR_HASH_SALT
+npx wrangler secret put WORKER_PROXY_SECRET
 ```
 
 `MEMBERS_PROXY_SECRET` must contain the same random value in the Caddy
 container environment. Caddy intercepts `/members/api/send-magic-link/` so
 signup and subscribe requests cannot bypass Turnstile. Existing-member sign-in
-still uses Ghost's normal passwordless flow. Never commit either secret.
+still uses Ghost's normal passwordless flow.
+
+`WORKER_PROXY_SECRET` must be a different random value of at least 32 characters,
+configured both as a Wrangler secret and in Caddy's environment. The Worker
+rejects direct requests that do not carry this Caddy-injected credential. It also
+uses `VISITOR_HASH_SALT` to sign an HttpOnly visitor cookie, so engagement identity
+is no longer trusted from request JSON. On the first request it can sign the
+existing local like ID once, preserving each reader's current liked state during
+the migration. Never commit any of these secrets, and do not rotate an existing
+`VISITOR_HASH_SALT` during this rollout.
+
+For an existing production installation, roll this change out in this order to
+avoid an API interruption:
+
+1. Generate the key, add `WORKER_PROXY_SECRET` to Caddy's environment, and reload
+   Caddy. The old Worker safely ignores the additional header.
+2. Add the same value with `npx wrangler secret put WORKER_PROXY_SECRET`.
+3. Apply D1 migrations and deploy the Worker:
+
+   ```bash
+   npx wrangler d1 migrations apply somnus-blog-engagement --remote
+   npx wrangler deploy
+   ```
+
+The presence cleanup cron runs every ten minutes and deletes at most 5,000 expired
+rows per invocation. Live engagement queries already ignore expired rows.
 
 ## GitHub Actions deployment
 
-`.github/workflows/theme-cicd.yml` validates pull requests. Theme changes pushed to
-`main` are built once and deployed through Ghost's official Admin API theme action.
-This grants no Tencent Cloud shell access. Production secrets are stored in GitHub
-Actions, not in this repository:
+`.github/workflows/theme-cicd.yml` runs the complete project checks for theme pull
+requests. Theme changes pushed to `main` are built once, deployed through Ghost's
+official Admin API theme action, and followed by a production homepage smoke test.
+`.github/workflows/project-ci.yml` runs the same complete checks for Worker,
+server, routing, and infrastructure changes. Actions are pinned to immutable commit
+SHAs. This grants no Tencent Cloud shell access. Production secrets are stored in
+GitHub Actions, not in this repository:
 
 - `GHOST_ADMIN_API_URL`
 - `GHOST_ADMIN_API_KEY`
@@ -262,6 +310,12 @@ rsync -av \
 ssh tencent-cloud 'bash /home/ubuntu/ghost-blog/server/bootstrap.sh'
 ```
 
+Ghost and MySQL images are pinned by multi-platform digest. On an existing
+installation, `bootstrap.sh` creates and verifies a backup before pulling images,
+then waits for the Ghost health check instead of treating a started container as a
+successful deployment. Update the tags and digests deliberately in the same
+reviewed change.
+
 During staging, Ghost is only exposed on remote `127.0.0.1:2368`. Preview it
 through an SSH tunnel:
 
@@ -277,6 +331,10 @@ python3 scripts/provision_ghost.py --url http://localhost:2368
 python3 scripts/configure_ghost.py --url http://localhost:2368
 ```
 
+`configure_ghost.py` also sets the publication cover to the versioned 1200×630
+theme image, which replaces Ghost's placeholder image in link previews. To use a
+different absolute image URL, pass `--cover-image`.
+
 After changing migration logic, update existing items in place while preserving
 their Ghost-generated slugs:
 
@@ -289,6 +347,19 @@ python3 scripts/reconcile_ghost.py --url http://localhost:2368 --report
 Owner credentials are stored locally in `.private/ghost-owner.json` with mode
 `0600`; the file is ignored by Git.
 
+Before publishing a diary or imported document, check names, student numbers,
+addresses, phone numbers and original attachment filenames. The known
+`2026-05-21` entry can be checked and redacted with:
+
+```bash
+python3 scripts/redact_public_pii.py
+python3 scripts/redact_public_pii.py --apply
+```
+
+The first command is a dry run. `--apply` writes an owner-only JSON backup under
+`.private/redaction-backups/` before updating Ghost. It requires the local owner
+credentials file and therefore cannot run from CI.
+
 ## Production cutover
 
 Set `GHOST_URL=https://blog.somnus.wiki` in the server `.env`, append
@@ -297,9 +368,33 @@ Compose services. The snippet also proxies Ghost 6's hosted ActivityPub routes.
 
 The production container remains bound to `127.0.0.1:2368`; only Caddy is
 internet-facing. DNS should point `blog.somnus.wiki` to the Tencent Cloud host.
+`server/deploy-theme.sh` retains the previous theme until Ghost becomes healthy
+and restores it automatically if the restart or health check fails.
 
 ## Backups
 
-`server/backup.sh` creates a compressed MySQL dump and content archive, keeps
-14 days, and writes files with owner-only permissions. The included systemd
-timer runs daily around 03:20 Asia/Shanghai.
+`server/backup.sh` creates and verifies a compressed MySQL dump and content archive,
+keeps local copies for 14 days, and writes files with owner-only permissions. Runtime
+logs and the transient theme rollback directory are excluded from the content archive.
+The included systemd timer runs daily around 03:20 Asia/Shanghai.
+
+For an encrypted offsite copy, install Restic on the server, create a password file
+with mode `0600`, add `RESTIC_REPOSITORY`, `RESTIC_PASSWORD_FILE` and the provider's
+backup-only credentials to `.env`, then initialize the repository exactly once:
+
+```bash
+cd /home/ubuntu/ghost-blog
+set -a
+source .env
+set +a
+restic init
+systemctl start ghost-blog-backup.service
+restic snapshots
+```
+
+When configured, each daily run uploads only the verified database/content archives
+and retains 14 daily, 8 weekly and 12 monthly snapshots. Expensive Restic pruning
+runs on Sunday by default; set `RESTIC_PRUNE_WEEKDAY` to another ISO weekday number
+if needed. A repository error fails the systemd job instead of silently creating a
+new repository. Test a restore to a temporary directory after setup and at least
+quarterly.

@@ -1,6 +1,14 @@
 blog.somnus.wiki {
     encode zstd gzip
 
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+        -X-Powered-By
+    }
+
     @members_origin {
         path /members/api/_origin/send-magic-link /members/api/_origin/send-magic-link/
         header X-Somnus-Members-Proxy {$MEMBERS_PROXY_SECRET}
@@ -21,6 +29,7 @@ blog.somnus.wiki {
         reverse_proxy https://engagement.somnus.wiki {
             header_up Host engagement.somnus.wiki
             header_up X-Somnus-Client-IP {remote_host}
+            header_up X-Somnus-Worker-Proxy {$WORKER_PROXY_SECRET}
         }
     }
 
@@ -29,7 +38,11 @@ blog.somnus.wiki {
     }
 
     handle /api/engagement/* {
-        reverse_proxy https://engagement.somnus.wiki
+        reverse_proxy https://engagement.somnus.wiki {
+            header_up Host engagement.somnus.wiki
+            header_up X-Somnus-Client-IP {remote_host}
+            header_up X-Somnus-Worker-Proxy {$WORKER_PROXY_SECRET}
+        }
     }
 
     handle /.ghost/activitypub/* {
