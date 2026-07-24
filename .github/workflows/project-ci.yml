@@ -12,6 +12,7 @@ on:
       - ".env.example"
       - "Makefile"
       - ".github/workflows/project-ci.yml"
+      - ".github/workflows/production-monitor.yml"
   push:
     branches: [main]
     paths:
@@ -24,6 +25,7 @@ on:
       - ".env.example"
       - "Makefile"
       - ".github/workflows/project-ci.yml"
+      - ".github/workflows/production-monitor.yml"
   workflow_dispatch:
 
 permissions:

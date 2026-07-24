@@ -6,7 +6,7 @@ LOCAL_FONTS := content/images/fonts/lxgw-wenkai-v2
 LOCAL_PORT ?= 2369
 LOCAL_URL ?= http://127.0.0.1:$(LOCAL_PORT)
 
-.PHONY: theme font check smoke dev demo logs stop analytics-login analytics-tokens analytics-deploy
+.PHONY: theme font check smoke monitor verify-backup dev demo logs stop analytics-login analytics-tokens analytics-deploy
 
 theme:
 	$(PYTHON) scripts/build_theme.py --theme $(THEME) --output build/somnus-yohaku.zip
@@ -27,6 +27,12 @@ check: theme
 
 smoke:
 	bash server/smoke-production.sh
+
+monitor:
+	bash server/check-production.sh
+
+verify-backup:
+	bash server/verify-backup.sh
 
 dev:
 	mkdir -p $(LOCAL_THEME)

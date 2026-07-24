@@ -1,0 +1,11 @@
+[Unit]
+Description=Weekly restore verification for Somnus Ghost backups
+
+[Timer]
+OnCalendar=Sun *-*-* 04:40:00 Asia/Shanghai
+Persistent=true
+RandomizedDelaySec=10m
+Unit=ghost-blog-backup-verify.service
+
+[Install]
+WantedBy=timers.target

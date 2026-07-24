@@ -49,8 +49,10 @@ docker compose logs -f ghost
 每日备份由 `ghost-blog-backup.timer` 执行，备份目录为
 `/home/ubuntu/ghost-blog/backups`，默认保留 14 天。若 `.env` 已配置 Restic，
 同一任务还会把加密备份发送到异地仓库，并保留 14 个日备份、8 个周备份和
-12 个月备份。运行日志与临时主题回滚目录不会写入内容归档。应定期运行
-`restic snapshots`，并至少每季度恢复到临时目录验证一次。
+12 个月备份。运行日志与临时主题回滚目录不会写入内容归档。
+`ghost-blog-backup-verify.timer` 每周把最新 SQL 实际恢复到隔离的临时 MySQL，
+同时验证并解压对应内容归档。可以运行 `make verify-backup` 手工触发。还应定期
+运行 `restic snapshots`，并至少每季度从异地 Restic 仓库完整恢复一次。
 
 ## 发布前隐私检查
 

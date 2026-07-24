@@ -77,6 +77,10 @@ def main() -> int:
     routes = (REPO_ROOT / "routes.yaml").read_text(encoding="utf-8")
     compose = (REPO_ROOT / "docker-compose.yml").read_text(encoding="utf-8")
     caddy = (REPO_ROOT / "Caddyfile.snippet").read_text(encoding="utf-8")
+    production_workflow = (
+        REPO_ROOT / ".github" / "workflows" / "production-cicd.yml"
+    ).read_text(encoding="utf-8")
+    monitor_workflow = REPO_ROOT / ".github" / "workflows" / "production-monitor.yml"
     font_stylesheet = (
         '<link rel="stylesheet" href="{{asset "fonts/lxgw-wenkai-v2/font.css"}}">'
     )
@@ -246,6 +250,29 @@ def main() -> int:
     ):
         if not worker_file.is_file():
             fail(f"missing Worker file: {worker_file.relative_to(REPO_ROOT)}")
+    for server_file in (
+        REPO_ROOT / "server" / "deploy-routes.sh",
+        REPO_ROOT / "server" / "check-production.sh",
+        REPO_ROOT / "server" / "verify-backup.sh",
+        REPO_ROOT / "server" / "ghost-blog-backup-verify.service",
+        REPO_ROOT / "server" / "ghost-blog-backup-verify.timer",
+    ):
+        if not server_file.is_file():
+            fail(f"missing operations file: {server_file.relative_to(REPO_ROOT)}")
+        if server_file.suffix == ".sh" and not (server_file.stat().st_mode & 0o111):
+            fail(f"operations script is not executable: {server_file.relative_to(REPO_ROOT)}")
+    if not monitor_workflow.is_file():
+        fail("missing scheduled production monitor workflow")
+    for deployment_contract in (
+        "group: ${{ github.event_name == 'pull_request'",
+        "deploy-server:",
+        "needs: deploy-server",
+        "needs: deploy-theme",
+        "server/deploy-routes.sh",
+        "server/sync-fonts.sh",
+    ):
+        if deployment_contract not in production_workflow:
+            fail(f"production workflow is missing {deployment_contract}")
     if "/privacy/ripfullpage/:" not in routes or "template: privacy-ripfullpage" not in routes:
         fail("ripfullpage privacy route must use the dedicated template")
     if "contact@somnus.wiki" not in privacy_template:

@@ -130,11 +130,10 @@ git push origin main
 
 推送 `main` 后：
 
-- `theme/**` 等主题相关修改会触发 GitHub Actions，验证通过后通过
-  Ghost Admin API 自动部署到线上。
-- `worker/**` 或 `Caddyfile.snippet` 修改会触发生产基础设施工作流：
-  先部署并验证 Caddy 博客配置块，再应用 D1 migration、部署 Worker，
-  最后运行完整生产冒烟测试。
+- 主题、Worker、Caddy、Routes 或字体相关修改会触发同一条生产部署流水线。
+- 流水线完成完整检查后，依次同步持久字体、安装 Caddy 配置、部署 Routes、
+  通过 Ghost Admin API 部署主题、应用 D1 migration、部署 Worker，最后运行
+  完整生产冒烟测试。同一时间只允许一条生产部署运行。
 - GitHub Actions 的 `GHOST_ADMIN_API_URL` 和 `GHOST_ADMIN_API_KEY`
   保存在 GitHub 仓库 Secrets 中，新设备不需要复制。
 - 文章、Page 和会员数据不会被主题部署覆盖。
@@ -143,26 +142,30 @@ git push origin main
 
 ### 5. 自动部署凭证与仍需手工处理的修改
 
-生产基础设施工作流需要在 GitHub `production` Environment 配置：
+生产流水线需要在 GitHub `production` Environment 配置：
 
 ```text
 CLOUDFLARE_API_TOKEN
+GHOST_ADMIN_API_URL
+GHOST_ADMIN_API_KEY
 PRODUCTION_SSH_HOST
 PRODUCTION_SSH_USER
 PRODUCTION_SSH_KEY
 PRODUCTION_SSH_KNOWN_HOSTS
 ```
 
-缺少凭证时，工作流仍会完成验证并明确提示部署处于等待状态，不会尝试使用
-空密钥。Cloudflare Token 只授予目标账号的 Worker、D1 和路由部署权限；
-SSH 使用单独的部署密钥。以下修改仍需要额外操作：
+缺少任意一项凭证时，验证仍会给出结果，但生产部署会明确失败，避免出现
+“工作流绿色但线上没有更新”的假象。Cloudflare Token 只授予目标账号的
+Worker、D1 和路由部署权限；SSH 使用单独的部署密钥。
 
-- `routes.yaml`：需要上传到 Ghost Admin 的 Routes 设置，或同步到腾讯云并重启
-  Ghost；只 push 不会更新线上路由。
-- `shared/fonts/lxgw-wenkai-v2/**`：重新构建字体后，需要先运行生产服务器上的
-  `server/sync-fonts.sh`；CI 会在主题部署前核对线上字体清单。
-- `server/**` 中除博客 Caddy 安装脚本以外的文件、`docker-compose.yml` 和
-  生产 `.env`：需要通过 SSH/rsync 同步到腾讯云并按部署文档执行。
+`routes.yaml` 和 `shared/fonts/lxgw-wenkai-v2/**` 已纳入自动部署。Routes 内容
+未变化时不会重启 Ghost；内容变化时会保留旧版本，重启和路由检查失败会自动
+回滚。字体在主题部署前同步并通过公网 manifest 再次核对。以下修改仍需要额外
+操作：
+
+- 备份脚本、systemd unit、`docker-compose.yml` 和生产 `.env` 等未被生产
+  流水线明确安装的服务器文件：需要通过 SSH/rsync 同步到腾讯云并按部署文档
+  执行。
 - Ghost 文章和 Page：直接在 Ghost Admin 编辑，不通过 Git 部署。
 
 `worker/wrangler.toml` 只保存可公开的绑定 ID 和变量，已纳入版本控制；
@@ -172,11 +175,13 @@ Worker Secret 仍只保存在 Cloudflare。`.env`、`.private/`、`.wrangler/`�
 部署后也可以从任意维护设备运行：
 
 ```bash
+make monitor
 make smoke
 ```
 
-它会验证安全响应头、Worker 协议版本、签名 Cookie 和在线状态接口，不会修改
-点赞、文章、会员或其他持久业务数据。
+`make monitor` 只读取首页、文章、响应头和互动接口，适合定时监控。
+`make smoke` 还会验证签名 Cookie 和在线状态写入。两者都不会修改点赞、文章、
+会员或其他长期业务数据。GitHub Actions 每六小时自动运行一次只读监控。
 
 ### 6. 结束本地开发
 
@@ -306,15 +311,22 @@ rows per invocation. Live engagement queries already ignore expired rows.
 ## GitHub Actions deployment
 
 `.github/workflows/theme-cicd.yml` runs the complete project checks for theme pull
-requests. Theme changes pushed to `main` are built once, deployed through Ghost's
-official Admin API theme action, and followed by a production homepage smoke test.
+requests. `.github/workflows/production-cicd.yml` is the single production writer:
+it serializes server configuration, persistent fonts, Ghost routes, the checked
+theme archive, D1 migrations, and the Worker before running the production smoke
+test. Missing credentials fail the relevant deployment instead of producing a
+misleading successful run.
 `.github/workflows/project-ci.yml` runs the same complete checks for Worker,
 server, routing, and infrastructure changes. Actions are pinned to immutable commit
-SHAs. This grants no Tencent Cloud shell access. Production secrets are stored in
-GitHub Actions, not in this repository:
+SHAs. Production secrets are stored in GitHub Actions, not in this repository:
 
+- `CLOUDFLARE_API_TOKEN`
 - `GHOST_ADMIN_API_URL`
 - `GHOST_ADMIN_API_KEY`
+- `PRODUCTION_SSH_HOST`
+- `PRODUCTION_SSH_USER`
+- `PRODUCTION_SSH_KEY`
+- `PRODUCTION_SSH_KNOWN_HOSTS`
 
 ## Build the migration bundle
 
@@ -408,6 +420,27 @@ keeps local copies for 14 days, and writes files with owner-only permissions. Ru
 logs, generated persistent font shards, and the transient theme rollback directory
 are excluded from the content archive.
 The included systemd timer runs daily around 03:20 Asia/Shanghai.
+`server/verify-backup.sh` performs a real restore into an isolated temporary MySQL
+container, checks the Ghost schema and post table, safely extracts the matching
+content archive, and removes all temporary resources afterward. The included
+verification timer runs this restore check every Sunday around 04:40.
+
+Install or refresh both timers on the production host with:
+
+```bash
+sudo install -m 644 server/ghost-blog-backup.service server/ghost-blog-backup.timer \
+  server/ghost-blog-backup-verify.service server/ghost-blog-backup-verify.timer \
+  /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now ghost-blog-backup.timer ghost-blog-backup-verify.timer
+systemctl list-timers 'ghost-blog-backup*'
+```
+
+Run an immediate restore verification after the first backup:
+
+```bash
+make verify-backup
+```
 
 For an encrypted offsite copy, install Restic on the server, create a password file
 with mode `0600`, add `RESTIC_REPOSITORY`, `RESTIC_PASSWORD_FILE` and the provider's
@@ -427,5 +460,5 @@ When configured, each daily run uploads only the verified database/content archi
 and retains 14 daily, 8 weekly and 12 monthly snapshots. Expensive Restic pruning
 runs on Sunday by default; set `RESTIC_PRUNE_WEEKDAY` to another ISO weekday number
 if needed. A repository error fails the systemd job instead of silently creating a
-new repository. Test a restore to a temporary directory after setup and at least
-quarterly.
+new repository. The weekly verification covers local archives; still perform a
+full restore from the encrypted Restic repository at least quarterly.

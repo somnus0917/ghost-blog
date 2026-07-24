@@ -1,22 +1,7 @@
-name: Ghost theme CI/CD
+name: Ghost theme checks
 
 on:
   pull_request:
-    paths:
-      - "theme/**"
-      - "scripts/build_theme.py"
-      - "scripts/build_webfont.mjs"
-      - "scripts/check_theme.py"
-      - "shared/fonts/lxgw-wenkai-v2/**"
-      - "server/deploy-theme.sh"
-      - "server/sync-fonts.sh"
-      - "package.json"
-      - "package-lock.json"
-      - "requirements-fonts.txt"
-      - "Makefile"
-      - ".github/workflows/theme-cicd.yml"
-  push:
-    branches: [main]
     paths:
       - "theme/**"
       - "scripts/build_theme.py"
@@ -36,8 +21,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: ghost-theme-production
-  cancel-in-progress: false
+  group: theme-checks-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate:
@@ -56,47 +41,3 @@ jobs:
           path: build/somnus-yohaku.zip
           if-no-files-found: error
           retention-days: 7
-
-  deploy:
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: validate
-    runs-on: ubuntu-latest
-    environment: production
-    env:
-      GHOST_ADMIN_API_URL: ${{ secrets.GHOST_ADMIN_API_URL }}
-      GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: somnus-yohaku-${{ github.sha }}
-          path: build
-      - name: Explain pending deployment credentials
-        if: env.GHOST_ADMIN_API_KEY == ''
-        run: |
-          echo "Theme validation passed; deployment is waiting for GHOST_ADMIN_API_KEY."
-      - name: Verify persistent fallback fonts
-        if: env.GHOST_ADMIN_API_KEY != ''
-        run: |
-          remote_manifest="$RUNNER_TEMP/lxgw-wenkai-v2-manifest.json"
-          curl --fail --silent --show-error \
-            --retry 5 --retry-all-errors \
-            -H "Cache-Control: no-cache" \
-            "https://blog.somnus.wiki/content/images/fonts/lxgw-wenkai-v2/manifest.json?v=${GITHUB_SHA}" \
-            --output "$remote_manifest"
-          if ! cmp --silent shared/fonts/lxgw-wenkai-v2/manifest.json "$remote_manifest"; then
-            echo "Production fallback fonts do not match this theme build." >&2
-            echo "Run server/sync-fonts.sh before deploying the theme." >&2
-            exit 1
-          fi
-      - name: Deploy through the Ghost Admin API
-        if: env.GHOST_ADMIN_API_KEY != ''
-        uses: TryGhost/action-deploy-theme@b1ff2a5eeac1d5438a0aab35eb996fe4010d889e # v2.0.4
-        with:
-          api-url: ${{ env.GHOST_ADMIN_API_URL }}
-          api-key: ${{ env.GHOST_ADMIN_API_KEY }}
-          version: v6.0
-          file: build/somnus-yohaku.zip
-      - name: Verify production homepage
-        if: env.GHOST_ADMIN_API_KEY != ''
-        run: curl --fail --silent --show-error --retry 5 --retry-all-errors https://blog.somnus.wiki/ >/dev/null

@@ -1,20 +1,44 @@
-name: Production infrastructure CI/CD
+name: Production deployment
 
 on:
   pull_request:
     paths:
+      - "theme/**"
       - "worker/**"
+      - "shared/fonts/lxgw-wenkai-v2/**"
+      - "scripts/build_theme.py"
+      - "scripts/build_webfont.mjs"
+      - "scripts/check_theme.py"
       - "server/install-caddy-blog.sh"
+      - "server/deploy-routes.sh"
+      - "server/sync-fonts.sh"
       - "server/smoke-production.sh"
       - "Caddyfile.snippet"
+      - "routes.yaml"
+      - "package.json"
+      - "package-lock.json"
+      - "requirements-fonts.txt"
+      - "Makefile"
       - ".github/workflows/production-cicd.yml"
   push:
     branches: [main]
     paths:
+      - "theme/**"
       - "worker/**"
+      - "shared/fonts/lxgw-wenkai-v2/**"
+      - "scripts/build_theme.py"
+      - "scripts/build_webfont.mjs"
+      - "scripts/check_theme.py"
       - "server/install-caddy-blog.sh"
+      - "server/deploy-routes.sh"
+      - "server/sync-fonts.sh"
       - "server/smoke-production.sh"
       - "Caddyfile.snippet"
+      - "routes.yaml"
+      - "package.json"
+      - "package-lock.json"
+      - "requirements-fonts.txt"
+      - "Makefile"
       - ".github/workflows/production-cicd.yml"
   workflow_dispatch:
 
@@ -22,7 +46,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: production-infrastructure
+  group: ${{ github.event_name == 'pull_request' && format('production-checks-{0}', github.ref) || 'production-deployment' }}
   cancel-in-progress: false
 
 jobs:
@@ -30,10 +54,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
       - name: Run project checks
         run: make check
+      - name: Upload checked theme archive
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: somnus-yohaku-${{ github.sha }}
+          path: build/somnus-yohaku.zip
+          if-no-files-found: error
+          retention-days: 7
 
-  deploy-edge:
+  deploy-server:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: validate
     runs-on: ubuntu-latest
@@ -45,28 +79,80 @@ jobs:
       PRODUCTION_SSH_KNOWN_HOSTS: ${{ secrets.PRODUCTION_SSH_KNOWN_HOSTS }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Explain pending edge credentials
-        if: env.PRODUCTION_SSH_HOST == '' || env.PRODUCTION_SSH_USER == '' || env.PRODUCTION_SSH_KEY == '' || env.PRODUCTION_SSH_KNOWN_HOSTS == ''
-        run: echo "Validation passed; edge deployment is waiting for the production SSH secrets."
+      - name: Require production SSH credentials
+        run: |
+          test -n "$PRODUCTION_SSH_HOST"
+          test -n "$PRODUCTION_SSH_USER"
+          test -n "$PRODUCTION_SSH_KEY"
+          test -n "$PRODUCTION_SSH_KNOWN_HOSTS"
       - name: Configure SSH
-        if: env.PRODUCTION_SSH_HOST != '' && env.PRODUCTION_SSH_USER != '' && env.PRODUCTION_SSH_KEY != '' && env.PRODUCTION_SSH_KNOWN_HOSTS != ''
         run: |
           install -m 700 -d ~/.ssh
           printf '%s\n' "$PRODUCTION_SSH_KEY" > ~/.ssh/production
           printf '%s\n' "$PRODUCTION_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/production
           chmod 600 ~/.ssh/known_hosts
-      - name: Install and validate the blog Caddy block
-        if: env.PRODUCTION_SSH_HOST != '' && env.PRODUCTION_SSH_USER != '' && env.PRODUCTION_SSH_KEY != '' && env.PRODUCTION_SSH_KNOWN_HOSTS != ''
+      - name: Install server-side blog configuration
         run: |
           remote="$PRODUCTION_SSH_USER@$PRODUCTION_SSH_HOST"
-          scp -i ~/.ssh/production Caddyfile.snippet server/install-caddy-blog.sh "$remote:/tmp/"
+          remote_fonts="/home/ubuntu/ghost-blog/shared/fonts/lxgw-wenkai-v2"
+          ssh -i ~/.ssh/production "$remote" "mkdir -p '$remote_fonts'"
+          rsync -az --delete --delay-updates \
+            -e "ssh -i $HOME/.ssh/production" \
+            shared/fonts/lxgw-wenkai-v2/ \
+            "$remote:$remote_fonts/"
+          scp -i ~/.ssh/production \
+            Caddyfile.snippet \
+            routes.yaml \
+            server/install-caddy-blog.sh \
+            server/deploy-routes.sh \
+            server/sync-fonts.sh \
+            "$remote:/tmp/"
+          ssh -i ~/.ssh/production "$remote" \
+            "bash /tmp/sync-fonts.sh /home/ubuntu/ghost-blog"
           ssh -i ~/.ssh/production "$remote" \
             "bash /tmp/install-caddy-blog.sh /home/ubuntu/caddy/Caddyfile /tmp/Caddyfile.snippet edge-caddy"
+          ssh -i ~/.ssh/production "$remote" \
+            "bash /tmp/deploy-routes.sh /tmp/routes.yaml /home/ubuntu/ghost-blog"
+
+  deploy-theme:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: deploy-server
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      GHOST_ADMIN_API_URL: ${{ secrets.GHOST_ADMIN_API_URL }}
+      GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: somnus-yohaku-${{ github.sha }}
+          path: build
+      - name: Require Ghost deployment credentials
+        run: |
+          test -n "$GHOST_ADMIN_API_URL"
+          test -n "$GHOST_ADMIN_API_KEY"
+      - name: Verify persistent fallback fonts
+        run: |
+          remote_manifest="$RUNNER_TEMP/lxgw-wenkai-v2-manifest.json"
+          curl --fail --silent --show-error \
+            --retry 5 --retry-all-errors \
+            -H "Cache-Control: no-cache" \
+            "https://blog.somnus.wiki/content/images/fonts/lxgw-wenkai-v2/manifest.json?v=${GITHUB_SHA}" \
+            --output "$remote_manifest"
+          cmp --silent shared/fonts/lxgw-wenkai-v2/manifest.json "$remote_manifest"
+      - name: Deploy through the Ghost Admin API
+        uses: TryGhost/action-deploy-theme@b1ff2a5eeac1d5438a0aab35eb996fe4010d889e # v2.0.4
+        with:
+          api-url: ${{ env.GHOST_ADMIN_API_URL }}
+          api-key: ${{ env.GHOST_ADMIN_API_KEY }}
+          version: v6.0
+          file: build/somnus-yohaku.zip
 
   deploy-worker:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: deploy-edge
+    needs: deploy-theme
     runs-on: ubuntu-latest
     environment: production
     env:
@@ -74,17 +160,13 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: b4749c86984f7a88f573e4e307834846
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Explain pending Cloudflare credentials
-        if: env.CLOUDFLARE_API_TOKEN == ''
-        run: echo "Edge validation passed; Worker deployment is waiting for CLOUDFLARE_API_TOKEN."
+      - name: Require Cloudflare deployment credentials
+        run: test -n "$CLOUDFLARE_API_TOKEN"
       - name: Apply D1 migrations
-        if: env.CLOUDFLARE_API_TOKEN != ''
         working-directory: worker
         run: npx --yes wrangler@4.113.0 d1 migrations apply somnus-blog-engagement --remote
       - name: Deploy Worker
-        if: env.CLOUDFLARE_API_TOKEN != ''
         working-directory: worker
         run: npx --yes wrangler@4.113.0 deploy
       - name: Verify production contract
-        if: env.CLOUDFLARE_API_TOKEN != ''
         run: bash server/smoke-production.sh
