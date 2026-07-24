@@ -630,6 +630,8 @@
     var tocNav = toc.querySelector("nav");
     if (headings.length < 2) {
       toc.hidden = true;
+      var articleLayout = toc.closest(".article-layout");
+      if (articleLayout) articleLayout.classList.add("article-layout--no-toc");
     } else {
       headings.forEach(function (heading, index) {
         if (!heading.id) heading.id = "section-" + (index + 1);

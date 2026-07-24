@@ -206,6 +206,11 @@ def main() -> int:
         fail("Ghost comments must load near the viewport instead of eagerly")
     if 'data-post-uuid="{{uuid}}"' not in post_template or "data-like-post" not in post_template:
         fail("post.hbs must expose the engagement controls")
+    if (
+        'classList.add("article-layout--no-toc")' not in main_js
+        or ".article-layout--no-toc" not in css
+    ):
+        fail("posts without enough headings must retain the full article width")
     if '"/api/engagement/"' not in main_js or '"/presence"' not in main_js or '"/like"' not in main_js:
         fail("main.js must connect the post engagement API")
     if "traffic-analytics:" not in compose or "tinybird-deploy:" not in compose:
