@@ -100,6 +100,16 @@ def main() -> int:
     production_workflow = (
         REPO_ROOT / ".github" / "workflows" / "production-cicd.yml"
     ).read_text(encoding="utf-8")
+    theme_workflow = (
+        REPO_ROOT / ".github" / "workflows" / "theme-cicd.yml"
+    ).read_text(encoding="utf-8")
+    install_caddy = (
+        REPO_ROOT / "server" / "install-caddy-blog.sh"
+    ).read_text(encoding="utf-8")
+    environment_example = (REPO_ROOT / ".env.example").read_text(encoding="utf-8")
+    tinybird_tokens = (
+        REPO_ROOT / "tinybird" / "getTokens.sh"
+    ).read_text(encoding="utf-8")
     monitor_workflow = REPO_ROOT / ".github" / "workflows" / "production-monitor.yml"
     font_stylesheet = (
         '<link rel="stylesheet" href="{{asset "fonts/lxgw-wenkai-v2/font.css"}}">'
@@ -270,6 +280,17 @@ def main() -> int:
             fail(f"Caddy must set {header}")
     if "X-Somnus-Worker-Proxy" not in caddy:
         fail("Caddy must authenticate requests to the engagement Worker")
+    if "X-Somnus-Members-Proxy" not in caddy:
+        fail("Caddy must authenticate requests to the Ghost members origin")
+    for secret_name in ("WORKER_PROXY_SECRET", "MEMBERS_PROXY_SECRET"):
+        if secret_name not in install_caddy:
+            fail(f"Caddy installer must validate {secret_name}")
+        if f"{secret_name}=" not in environment_example:
+            fail(f".env.example must document {secret_name}")
+    if "TINYBIRD_STATS_TOKEN=" not in tinybird_tokens:
+        fail("Tinybird token helper must output TINYBIRD_STATS_TOKEN")
+    if "actions/setup-node@" not in theme_workflow or "run: npm ci" not in theme_workflow:
+        fail("theme workflow must install its Node dependencies")
     for worker_file in (
         WORKER_ROOT / "src" / "index.mjs",
         WORKER_ROOT / "migrations" / "0001_engagement.sql",

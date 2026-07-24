@@ -14,6 +14,7 @@ import {
 
 const postUuid = "6c3dfb40-8b72-49f2-bf50-735885f0b76b";
 const proxySecret = "test-worker-proxy-secret-32-chars";
+const membersProxySecret = "test-members-proxy-secret-32-characters";
 const visitorSalt = "test-visitor-hash-salt-32-characters";
 const visitorCookieSecret = "test-visitor-cookie-secret-32-characters";
 
@@ -143,7 +144,7 @@ test("rate-limits repeated signup requests before forwarding", async () => {
     ALLOWED_ORIGIN: "https://blog.somnus.wiki",
     WORKER_PROXY_SECRET: proxySecret,
     GHOST_MEMBERS_PROXY_URL: "https://blog.somnus.wiki/members/api/_origin/send-magic-link/",
-    MEMBERS_PROXY_SECRET: "test-proxy-secret",
+    MEMBERS_PROXY_SECRET: membersProxySecret,
     VISITOR_HASH_SALT: visitorSalt,
     VISITOR_COOKIE_SECRET: visitorCookieSecret,
     SIGNUP_RATE_LIMITER: {limit: async () => ({success: false})}
@@ -170,11 +171,36 @@ test("rejects signup requests without a Turnstile token", async () => {
     VISITOR_HASH_SALT: visitorSalt,
     VISITOR_COOKIE_SECRET: visitorCookieSecret,
     GHOST_MEMBERS_PROXY_URL: "https://blog.somnus.wiki/members/api/_origin/send-magic-link/",
-    MEMBERS_PROXY_SECRET: "test-proxy-secret",
+    MEMBERS_PROXY_SECRET: membersProxySecret,
     SIGNUP_RATE_LIMITER: {limit: async () => ({success: true})}
   });
   assert.equal(response.status, 403);
   assert.match(await response.text(), /Human verification failed/);
+});
+
+test("fails closed when the members proxy credential is weak", async () => {
+  const response = await worker.fetch(
+    new Request("https://engagement.somnus.wiki/members/api/send-magic-link/", {
+      method: "POST",
+      headers: proxyHeaders({"content-type": "application/json"}),
+      body: JSON.stringify({
+        email: "reader@example.com",
+        emailType: "signin",
+        integrityToken: "ghost-integrity-token"
+      })
+    }),
+    {
+      ALLOWED_ORIGIN: "https://blog.somnus.wiki",
+      WORKER_PROXY_SECRET: proxySecret,
+      VISITOR_HASH_SALT: visitorSalt,
+      VISITOR_COOKIE_SECRET: visitorCookieSecret,
+      GHOST_MEMBERS_PROXY_URL: "https://blog.somnus.wiki/members/api/_origin/send-magic-link/",
+      MEMBERS_PROXY_SECRET: "weak",
+      SIGNUP_RATE_LIMITER: {limit: async () => ({success: true})}
+    }
+  );
+  assert.equal(response.status, 503);
+  assert.match(await response.text(), /temporarily unavailable/);
 });
 
 test("rejects direct requests that bypass Caddy", async () => {
@@ -197,7 +223,8 @@ test("issues and then accepts a signed HttpOnly visitor cookie", async () => {
     WORKER_PROXY_SECRET: proxySecret,
     VISITOR_HASH_SALT: visitorSalt,
     VISITOR_COOKIE_SECRET: visitorCookieSecret,
-    DB: createD1Stub()
+    DB: createD1Stub(),
+    ENGAGEMENT_RATE_LIMITER: {limit: async () => ({success: true})}
   };
   const firstResponse = await worker.fetch(
     new Request(`https://engagement.somnus.wiki/api/engagement/${postUuid}`, {
@@ -244,6 +271,52 @@ test("rejects an invalid engagement method without issuing a visitor cookie", as
   assert.equal(response.status, 405);
   assert.equal(response.headers.get("allow"), "GET");
   assert.equal(response.headers.get("set-cookie"), null);
+});
+
+test("rate-limits stats before querying Tinybird or D1", async () => {
+  const statements = [];
+  const rateLimitKeys = [];
+  const response = await worker.fetch(
+    new Request(`https://engagement.somnus.wiki/api/engagement/${postUuid}`, {
+      headers: proxyHeaders()
+    }),
+    {
+      ALLOWED_ORIGIN: "https://blog.somnus.wiki",
+      WORKER_PROXY_SECRET: proxySecret,
+      VISITOR_HASH_SALT: visitorSalt,
+      VISITOR_COOKIE_SECRET: visitorCookieSecret,
+      DB: createD1Stub(statements),
+      ENGAGEMENT_RATE_LIMITER: {
+        async limit({key}) {
+          rateLimitKeys.push(key);
+          return {success: false};
+        }
+      }
+    }
+  );
+  assert.equal(response.status, 429);
+  assert.equal(statements.length, 0);
+  assert.equal(rateLimitKeys.length, 2);
+  assert.equal(rateLimitKeys.some((key) => key.startsWith("stats:visitor:")), true);
+  assert.equal(rateLimitKeys.some((key) => key.startsWith("stats:client:")), true);
+});
+
+test("stats fail closed when the rate limiter binding is unavailable", async () => {
+  const statements = [];
+  const response = await worker.fetch(
+    new Request(`https://engagement.somnus.wiki/api/engagement/${postUuid}`, {
+      headers: proxyHeaders()
+    }),
+    {
+      ALLOWED_ORIGIN: "https://blog.somnus.wiki",
+      WORKER_PROXY_SECRET: proxySecret,
+      VISITOR_HASH_SALT: visitorSalt,
+      VISITOR_COOKIE_SECRET: visitorCookieSecret,
+      DB: createD1Stub(statements)
+    }
+  );
+  assert.equal(response.status, 429);
+  assert.equal(statements.length, 0);
 });
 
 test("rate-limits likes by signed visitor and trusted client IP", async () => {

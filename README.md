@@ -304,24 +304,29 @@ npx wrangler secret put WORKER_PROXY_SECRET
 `MEMBERS_PROXY_SECRET` must contain the same random value in the Caddy
 container environment. Caddy intercepts `/members/api/send-magic-link/` so
 signup and subscribe requests cannot bypass Turnstile. Existing-member sign-in
-still uses Ghost's normal passwordless flow.
+still uses Ghost's normal passwordless flow. The Caddy installer refuses to
+reload when either proxy secret is missing, too short, or reused for both
+boundaries.
 
-`WORKER_PROXY_SECRET`, `VISITOR_HASH_SALT`, and `VISITOR_COOKIE_SECRET` must be
-three different random values of at least 32 characters. Configure the proxy
-secret both in Wrangler and in Caddy's environment. The Worker rejects direct
-requests that do not carry this Caddy-injected credential. It uses the dedicated
-cookie secret to sign an HttpOnly visitor cookie, so engagement identity is no
-longer trusted from request JSON. On the first request it can sign the
-existing local like ID once, preserving each reader's current liked state during
-the migration. Never commit any of these secrets, and do not rotate an existing
-`VISITOR_HASH_SALT` during this rollout.
+`WORKER_PROXY_SECRET`, `MEMBERS_PROXY_SECRET`, `VISITOR_HASH_SALT`, and
+`VISITOR_COOKIE_SECRET` must be four different random values of at least 32
+characters. Configure both proxy secrets in Wrangler and in Caddy's environment.
+The Worker rejects direct requests that do not carry the Caddy-injected worker
+credential. It uses the dedicated cookie secret to sign an HttpOnly visitor
+cookie, so engagement identity is no longer trusted from request JSON. Legacy
+`X-Like-Visitor` values are intentionally ignored; a browser without a valid
+signed cookie receives a fresh engagement identity. Never commit any of these
+secrets, and do not rotate an existing `VISITOR_HASH_SALT` without planning a
+like-identity migration.
 
 For an existing production installation, roll this change out in this order to
 avoid an API interruption:
 
-1. Generate the key, add `WORKER_PROXY_SECRET` to Caddy's environment, and reload
-   Caddy. The old Worker safely ignores the additional header.
-2. Add the same value with `npx wrangler secret put WORKER_PROXY_SECRET`.
+1. Generate two different proxy keys, add `WORKER_PROXY_SECRET` and
+   `MEMBERS_PROXY_SECRET` to Caddy's environment, and recreate the Caddy
+   container.
+2. Add the matching values with `npx wrangler secret put WORKER_PROXY_SECRET`
+   and `npx wrangler secret put MEMBERS_PROXY_SECRET`.
 3. Apply D1 migrations and deploy the Worker:
 
    ```bash
@@ -330,7 +335,9 @@ avoid an API interruption:
    ```
 
 The presence cleanup cron runs every ten minutes and deletes at most 5,000 expired
-rows per invocation. Live engagement queries already ignore expired rows.
+rows per invocation. Live engagement queries already ignore expired rows. Public
+statistics reads, presence writes, and like writes are all limited by signed
+visitor identity and the client IP supplied by Caddy.
 
 ## GitHub Actions deployment
 
@@ -484,5 +491,7 @@ When configured, each daily run uploads only the verified database/content archi
 and retains 14 daily, 8 weekly and 12 monthly snapshots. Expensive Restic pruning
 runs on Sunday by default; set `RESTIC_PRUNE_WEEKDAY` to another ISO weekday number
 if needed. A repository error fails the systemd job instead of silently creating a
-new repository. The weekly verification covers local archives; still perform a
-full restore from the encrypted Restic repository at least quarterly.
+new repository, but the already verified local archives are retained so a temporary
+offsite outage does not remove that day's local recovery point. The weekly
+verification covers local archives; still perform a full restore from the encrypted
+Restic repository at least quarterly.

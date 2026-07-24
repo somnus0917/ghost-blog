@@ -68,7 +68,8 @@ npx wrangler d1 create somnus-blog-engagement
 cp wrangler.toml.example wrangler.toml
 ```
 
-把 D1 创建命令返回的 `database_id` 写入 `worker/wrangler.toml`。这个文件已被 Git 忽略。
+把 D1 创建命令返回的 `database_id` 写入 `worker/wrangler.toml`。这个文件只保存
+可公开的绑定 ID 和变量，已经纳入 Git；真实 Token 必须继续使用 Wrangler Secret。
 
 执行远程数据库迁移：
 
@@ -83,13 +84,15 @@ Ghost 部署 Tinybird 数据文件后，会创建名为 `stats_page` 的只读 T
 ```bash
 cd worker
 npx wrangler secret put TINYBIRD_STATS_TOKEN
+npx wrangler secret put MEMBERS_PROXY_SECRET
 npx wrangler secret put VISITOR_HASH_SALT
 npx wrangler secret put VISITOR_COOKIE_SECRET
 npx wrangler secret put WORKER_PROXY_SECRET
 ```
 
-`VISITOR_HASH_SALT`、`VISITOR_COOKIE_SECRET` 和 `WORKER_PROXY_SECRET`
-必须使用三个不同的新随机值，并且至少 32 个字符。例如分别运行三次：
+`MEMBERS_PROXY_SECRET`、`VISITOR_HASH_SALT`、`VISITOR_COOKIE_SECRET` 和
+`WORKER_PROXY_SECRET` 必须使用四个不同的新随机值，并且至少 32 个字符。
+例如分别运行四次：
 
 ```bash
 openssl rand -hex 32
@@ -101,9 +104,9 @@ openssl rand -hex 32
 engagement.somnus.wiki
 ```
 
-先把 `WORKER_PROXY_SECRET` 的同一个值加入生产 Caddy 的环境并重载 Caddy，
-再配置 Wrangler Secret。旧 Worker 会安全地忽略新增请求头，因此这个顺序
-不会中断现有接口。然后应用迁移并部署：
+先把两个代理 Secret 的对应值加入生产 Caddy 的环境并重新创建 Caddy 容器，
+再配置 Wrangler Secret。`server/install-caddy-blog.sh` 会在任一密钥缺失、
+长度不足或两个值相同时拒绝安装。然后应用迁移并部署：
 
 ```bash
 npx wrangler d1 migrations apply somnus-blog-engagement --remote
@@ -148,6 +151,6 @@ GET  /api/engagement/health
   Cookie、原始 ID、邮箱或 IP 地址。
 - Worker 限制网页来源为 `https://blog.somnus.wiki`。
 - Worker 要求 Caddy 注入的内部凭证，直接调用自定义域名会返回 `403`。
-- Worker 对互动写入和邮件注册分别限流；超过额度返回 `429`。
+- Worker 对统计读取、互动写入和邮件注册分别限流；超过额度返回 `429`。
 
 如果 Worker 尚未部署或暂时不可用，主题会自动隐藏统计和点赞，不影响文章内容、评论、目录或阅读进度。

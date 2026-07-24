@@ -9,11 +9,35 @@ test -f "$config_file"
 test -f "$snippet_file"
 docker inspect "$container" >/dev/null
 
-if ! docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$container" \
-  | grep -Eq '^WORKER_PROXY_SECRET=.{32,}$'; then
+container_environment="$(
+  docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$container"
+)"
+read_container_secret() {
+  local name="$1"
+  printf '%s\n' "$container_environment" \
+    | awk -v prefix="$name=" '
+        index($0, prefix) == 1 {
+          print substr($0, length(prefix) + 1)
+          exit
+        }
+      '
+}
+
+worker_proxy_secret="$(read_container_secret WORKER_PROXY_SECRET)"
+members_proxy_secret="$(read_container_secret MEMBERS_PROXY_SECRET)"
+if (( ${#worker_proxy_secret} < 32 )); then
   echo "refusing to install the blog proxy without WORKER_PROXY_SECRET in $container" >&2
   exit 1
 fi
+if (( ${#members_proxy_secret} < 32 )); then
+  echo "refusing to install the blog proxy without MEMBERS_PROXY_SECRET in $container" >&2
+  exit 1
+fi
+if [[ "$worker_proxy_secret" == "$members_proxy_secret" ]]; then
+  echo "WORKER_PROXY_SECRET and MEMBERS_PROXY_SECRET must use different values" >&2
+  exit 1
+fi
+unset container_environment worker_proxy_secret members_proxy_secret
 
 candidate="$(mktemp "${config_file}.candidate.XXXXXX")"
 backup="${config_file}.backup-$(date -u +%Y%m%dT%H%M%SZ)"

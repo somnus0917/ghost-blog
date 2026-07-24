@@ -159,7 +159,12 @@ async function forwardMagicLink(request, env) {
   ) {
     return json({errors: [{message: "Invalid registration request."}]}, 400);
   }
-  if (!env.GHOST_MEMBERS_PROXY_URL || !env.MEMBERS_PROXY_SECRET) {
+  if (
+    !env.GHOST_MEMBERS_PROXY_URL
+    || typeof env.MEMBERS_PROXY_SECRET !== "string"
+    || env.MEMBERS_PROXY_SECRET.length < 32
+    || env.MEMBERS_PROXY_SECRET === env.WORKER_PROXY_SECRET
+  ) {
     console.error("Ghost members proxy is not configured");
     return json({errors: [{message: "Registration is temporarily unavailable."}]}, 503);
   }
@@ -288,7 +293,13 @@ function attachVisitorCookie(response, visitor) {
   return response;
 }
 
-async function checkEngagementRateLimit(request, env, action, visitorHash) {
+async function checkEngagementRateLimit(
+  request,
+  env,
+  action,
+  visitorHash,
+  {failOpen = true} = {}
+) {
   const keys = [`${action}:visitor:${visitorHash}`];
   const clientIp = request.headers.get("x-somnus-client-ip") || "";
   if (clientIp) {
@@ -296,7 +307,11 @@ async function checkEngagementRateLimit(request, env, action, visitorHash) {
     keys.push(`${action}:client:${clientHash}`);
   }
   const results = await Promise.all(
-    keys.map((key) => checkRateLimit(env.ENGAGEMENT_RATE_LIMITER, key))
+    keys.map((key) => checkRateLimit(
+      env.ENGAGEMENT_RATE_LIMITER,
+      key,
+      {failOpen}
+    ))
   );
   return results.every(Boolean);
 }
@@ -443,6 +458,15 @@ async function handleRequest(request, env) {
   try {
     const visitor = await resolveVisitor(request, env);
     if (route.action === "stats") {
+      if (!await checkEngagementRateLimit(
+        request,
+        env,
+        "stats",
+        visitor.hash,
+        {failOpen: false}
+      )) {
+        return attachVisitorCookie(rateLimited(), visitor);
+      }
       return attachVisitorCookie(
         json(await getEngagement(env, route.postUuid, visitor.hash)),
         visitor

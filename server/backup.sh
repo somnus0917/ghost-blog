@@ -7,11 +7,11 @@ backup_dir="$install_dir/backups"
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 database_backup="$backup_dir/ghost-db-$timestamp.sql.gz"
 content_backup="$backup_dir/ghost-content-$timestamp.tar.gz"
-backup_complete=false
+local_backup_complete=false
 
 mkdir -p "$backup_dir"
 cleanup() {
-  if [[ "$backup_complete" != "true" ]]; then
+  if [[ "$local_backup_complete" != "true" ]]; then
     rm -f "$database_backup" "$content_backup"
   fi
 }
@@ -36,6 +36,7 @@ tar -C "$install_dir" -czf "$content_backup" \
   content
 gzip -t "$database_backup"
 tar -tzf "$content_backup" >/dev/null
+local_backup_complete=true
 find "$backup_dir" -type f -mtime +14 -delete
 
 if [[ -n "${RESTIC_REPOSITORY:-}" ]]; then
@@ -63,5 +64,3 @@ if [[ -n "${RESTIC_REPOSITORY:-}" ]]; then
     restic prune
   fi
 fi
-
-backup_complete=true
