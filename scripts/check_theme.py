@@ -13,6 +13,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 THEME_ROOT = REPO_ROOT / "theme" / "somnus-yohaku"
+THEME_SOURCE_ROOT = REPO_ROOT / "theme" / "src"
 SHARED_FONT = REPO_ROOT / "shared" / "fonts" / "LXGWWenKai-Regular.woff2"
 WEB_FONT_DIR = THEME_ROOT / "assets" / "fonts" / "lxgw-wenkai-v2"
 FALLBACK_FONT_DIR = REPO_ROOT / "shared" / "fonts" / "lxgw-wenkai-v2"
@@ -28,7 +29,15 @@ REQUIRED = {
     "privacy-ripfullpage.hbs",
     "package.json",
     "assets/css/screen.css",
+    "assets/css/sodo-search-1.8.212.css",
     "assets/js/main.js",
+    "assets/js/theme-bootstrap.js",
+    "assets/js/portal-2.69.201.min.js",
+    "assets/js/portal.LICENSE.txt",
+    "assets/js/sodo-search-1.8.212.min.js",
+    "assets/js/sodo-search.LICENSE.txt",
+    "assets/js/comments-ui-1.5.211.min.js",
+    "assets/js/comments-ui.LICENSE.txt",
     "assets/js/mathjax.js",
     "assets/js/mathjax.LICENSE.txt",
     "assets/fonts/lxgw-wenkai-v2/font.css",
@@ -72,7 +81,18 @@ def main() -> int:
     default_template = (THEME_ROOT / "default.hbs").read_text(encoding="utf-8")
     home_template = (THEME_ROOT / "home.hbs").read_text(encoding="utf-8")
     post_template = (THEME_ROOT / "post.hbs").read_text(encoding="utf-8")
-    main_js = (THEME_ROOT / "assets" / "js" / "main.js").read_text(encoding="utf-8")
+    main_bundle = THEME_ROOT / "assets" / "js" / "main.js"
+    bootstrap_bundle = THEME_ROOT / "assets" / "js" / "theme-bootstrap.js"
+    main_js = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((THEME_SOURCE_ROOT / "js").rglob("*.js"))
+    )
+    if main_bundle.stat().st_size > 30 * 1024:
+        fail("bundled main.js exceeds the 30 KiB performance budget")
+    if len(css.encode("utf-8")) > 40 * 1024:
+        fail("bundled screen.css exceeds the 40 KiB performance budget")
+    if bootstrap_bundle.stat().st_size > 1024:
+        fail("theme-bootstrap.js exceeds the 1 KiB performance budget")
     privacy_template = (THEME_ROOT / "privacy-ripfullpage.hbs").read_text(encoding="utf-8")
     routes = (REPO_ROOT / "routes.yaml").read_text(encoding="utf-8")
     compose = (REPO_ROOT / "docker-compose.yml").read_text(encoding="utf-8")
@@ -176,15 +196,15 @@ def main() -> int:
         fail(f"site cover must be 1200x630, got {width}x{height}")
     if cover_image.stat().st_size > 500 * 1024:
         fail("site cover is unexpectedly large")
-    if "cdn.jsdelivr.net/npm/mathjax" in default_template:
-        fail("MathJax must be loaded from the theme bundle")
+    if "cdn.jsdelivr.net" in default_template:
+        fail("runtime frontend dependencies must be self-hosted")
     if 'data-mathjax-src="{{asset "js/mathjax.js"}}"' not in default_template:
         fail("default.hbs must expose the local MathJax bundle for lazy loading")
     if '<script async src="{{asset "js/mathjax.js"}}"' in default_template:
         fail("MathJax must not load eagerly on every page")
     if '<script defer src="{{asset "js/mermaid.js"}}"' in default_template:
         fail("Mermaid must not load eagerly on every page")
-    if "loadMathJaxIfNeeded" not in main_js or "somnus-mermaid" not in main_js:
+    if "pageContainsMath" not in main_js or "somnus-mermaid" not in main_js:
         fail("main.js must lazy-load MathJax and Mermaid")
     ghost_head_match = re.search(r'{{ghost_head exclude="([^"]+)"}}', default_template)
     ghost_head_excludes = set(ghost_head_match.group(1).split(",")) if ghost_head_match else set()
@@ -194,10 +214,16 @@ def main() -> int:
         fail("Ghost Portal must load on demand")
     if "data-search-src=" not in default_template or "function loadSearch()" not in main_js:
         fail("Ghost Search must load on demand")
-    if "@~" in default_template:
-        fail("runtime CDN dependencies must use exact versions")
-    if "sodo-search@1.8.212" not in default_template or "portal@2.69.201" not in default_template:
-        fail("runtime Ghost dependencies must remain pinned to reviewed versions")
+    for asset in (
+        'js/portal-2.69.201.min.js',
+        'js/sodo-search-1.8.212.min.js',
+        'css/sodo-search-1.8.212.css',
+        'js/comments-ui-1.5.211.min.js',
+    ):
+        if asset not in default_template:
+            fail(f"default.hbs must expose self-hosted {asset}")
+    if re.search(r"<script>(?!\s*</script>)", default_template):
+        fail("default.hbs must not contain executable inline scripts")
     if "pointerenter" not in main_js or "prewarmSearch" not in main_js:
         fail("Ghost Search must prewarm on user intent")
     if 'excerpt words="22"' in home_template or home_template.count('data-character-excerpt="80"') != 2:
@@ -237,6 +263,8 @@ def main() -> int:
         "Referrer-Policy",
         "Permissions-Policy",
         "Content-Security-Policy-Report-Only",
+        "Content-Security-Policy",
+        "Cache-Control",
     ):
         if header not in caddy:
             fail(f"Caddy must set {header}")

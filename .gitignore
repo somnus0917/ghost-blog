@@ -6,11 +6,11 @@ build/
 content/
 mysql/
 backups/
-theme/somnus-yohaku/assets/fonts/MapleMono-NF-CN-Regular.woff2
 __pycache__/
 *.py[cod]
 .DS_Store
 .playwright-cli/
+.lighthouseci/
 output/
 .wrangler/
 node_modules/

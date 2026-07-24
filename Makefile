@@ -6,9 +6,12 @@ LOCAL_FONTS := content/images/fonts/lxgw-wenkai-v2
 LOCAL_PORT ?= 2369
 LOCAL_URL ?= http://127.0.0.1:$(LOCAL_PORT)
 
-.PHONY: theme font check smoke monitor verify-backup dev demo logs stop analytics-login analytics-tokens analytics-deploy
+.PHONY: assets theme font check e2e-up e2e-down e2e lighthouse smoke monitor verify-backup dev demo logs stop analytics-login analytics-tokens analytics-deploy
 
-theme:
+assets:
+	npm run build:theme-assets
+
+theme: assets
 	$(PYTHON) scripts/build_theme.py --theme $(THEME) --output build/somnus-yohaku.zip
 
 font:
@@ -19,11 +22,27 @@ check: theme
 	PYTHONPYCACHEPREFIX=build/pycache $(PYTHON) -m py_compile scripts/*.py
 	PYTHONPYCACHEPREFIX=build/pycache $(PYTHON) -m unittest discover -s scripts -p 'test_*.py'
 	bash -n server/*.sh
+	node --check scripts/build_theme_assets.mjs
 	node --check scripts/build_webfont.mjs
 	node --check $(THEME)/assets/js/main.js
 	node --check $(THEME)/assets/js/latex-editor.js
 	node --test worker/test/*.test.mjs
 	docker compose --env-file .env.example config --quiet
+
+e2e-up: theme
+	mkdir -p build/e2e/content/settings
+	rsync -a routes.yaml build/e2e/content/settings/routes.yaml
+	docker compose -f docker-compose.e2e.yml up -d --wait --wait-timeout 120
+	$(PYTHON) scripts/setup_e2e_ghost.py
+
+e2e-down:
+	docker compose -f docker-compose.e2e.yml down
+
+e2e: e2e-up
+	npm run test:e2e
+
+lighthouse: e2e-up
+	npm run test:lighthouse
 
 smoke:
 	bash server/smoke-production.sh
@@ -34,7 +53,7 @@ monitor:
 verify-backup:
 	bash server/verify-backup.sh
 
-dev:
+dev: assets
 	mkdir -p $(LOCAL_THEME)
 	rsync -a --delete $(THEME)/ $(LOCAL_THEME)/
 	mkdir -p $(LOCAL_FONTS)

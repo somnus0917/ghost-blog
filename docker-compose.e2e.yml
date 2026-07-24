@@ -1,0 +1,55 @@
+services:
+  e2e-ghost:
+    image: ghost:6-alpine@sha256:63b12cb176ffe9cfe651b839c18f6c7261004370f566d9ae218cacd67766b2b1
+    container_name: somnus-ghost-e2e
+    depends_on:
+      e2e-mysql:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      url: http://127.0.0.1:2370
+      database__client: mysql
+      database__connection__host: e2e-mysql
+      database__connection__port: 3306
+      database__connection__user: ghost_e2e
+      database__connection__password: ghost-e2e-password
+      database__connection__database: ghost_e2e
+      privacy__useUpdateCheck: "false"
+      security__staffDeviceVerification: "false"
+    ports:
+      - "127.0.0.1:2370:2368"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "require('http').get('http://127.0.0.1:2368/', (response) => process.exit(response.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 20s
+    volumes:
+      - ./build/e2e/content:/var/lib/ghost/content
+
+  e2e-mysql:
+    image: mysql:8.0@sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b
+    container_name: somnus-ghost-mysql-e2e
+    environment:
+      MYSQL_DATABASE: ghost_e2e
+      MYSQL_USER: ghost_e2e
+      MYSQL_PASSWORD: ghost-e2e-password
+      MYSQL_ROOT_PASSWORD: ghost-e2e-root-password
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 20s
+    volumes:
+      - e2e_mysql:/var/lib/mysql
+
+volumes:
+  e2e_mysql:

@@ -5,19 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#fdfdfb">
     <title>{{{block "title_prefix"}}}{{meta_title}}</title>
-    <script>
-      try {
-        var initialTheme = localStorage.getItem("somnus-theme") || "system";
-        var initialDark = initialTheme === "dark"
-          || (initialTheme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-        document.documentElement.dataset.theme = initialTheme;
-        document.documentElement.style.colorScheme = initialTheme === "system" ? "light dark" : initialTheme;
-        document.querySelector('meta[name="theme-color"]').content = initialDark ? "#171817" : "#fdfdfb";
-      } catch (error) {
-        document.documentElement.dataset.theme = "system";
-        document.documentElement.style.colorScheme = "light dark";
-      }
-    </script>
+    <script src="{{asset "js/theme-bootstrap.js"}}"></script>
     <link
         rel="preload"
         href="/assets/fonts/lxgw-wenkai-v2/LXGWWenKai-Core-v2.woff2"
@@ -44,16 +32,17 @@
         data-somnus-runtime
         data-mermaid-src="{{asset "js/mermaid.js"}}"
         data-mathjax-src="{{asset "js/mathjax.js"}}"
-        data-portal-src="https://cdn.jsdelivr.net/ghost/portal@2.69.201/umd/portal.min.js"
+        data-portal-src="{{asset "js/portal-2.69.201.min.js"}}"
         data-portal-ghost="{{@site.url}}"
         data-portal-api="{{@site.url}}/ghost/api/content/"
         data-portal-key="{{content_api_key}}"
         data-portal-locale="{{@site.locale}}"
-        data-search-src="https://cdn.jsdelivr.net/ghost/sodo-search@1.8.212/umd/sodo-search.min.js"
-        data-search-styles="https://cdn.jsdelivr.net/ghost/sodo-search@1.8.212/umd/main.css"
+        data-search-src="{{asset "js/sodo-search-1.8.212.min.js"}}"
+        data-search-styles="{{asset "css/sodo-search-1.8.212.css"}}"
         data-search-root="{{@site.url}}"
         data-search-key="{{content_api_key}}"
         data-search-locale="{{@site.locale}}"
+        data-comments-src="{{asset "js/comments-ui-1.5.211.min.js"}}"
     ></script>
     {{ghost_foot}}
 </body>

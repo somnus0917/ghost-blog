@@ -2,9 +2,16 @@
   "name": "somnus-ghost-tooling",
   "private": true,
   "scripts": {
-    "build:font": "node scripts/build_webfont.mjs"
+    "build:font": "node scripts/build_webfont.mjs",
+    "build:theme-assets": "node scripts/build_theme_assets.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:lighthouse": "node scripts/run_lighthouse.mjs"
   },
   "devDependencies": {
-    "cn-font-split": "7.4.3"
+    "@lhci/cli": "0.15.1",
+    "@playwright/test": "1.61.1",
+    "cn-font-split": "7.4.3",
+    "esbuild": "0.28.1"
   }
 }

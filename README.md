@@ -261,6 +261,30 @@ page, while the core font is preloaded with the same URL used by the generated
 CSS. Ghost Search loads after the first search action, while the comments UI loads
 only when its section is within 800px of the viewport.
 
+Theme source files live under `theme/src/`. JavaScript is split by runtime,
+site interaction, engagement, and rich-content responsibilities; CSS is split
+into core, Ghost cards, editorial, and feature layers. `make theme` bundles and
+minifies those sources into `theme/somnus-yohaku/assets/`. Portal, Search, and
+Comments UI are pinned and self-hosted in the theme so the public site does not
+depend on jsDelivr at runtime.
+
+For repeatable browser validation, use the isolated Ghost stack on port `2370`.
+It has its own MySQL volume and test-only owner account and does not modify the
+normal local site on port `2369`:
+
+```bash
+make e2e
+make lighthouse
+make e2e-down
+```
+
+Playwright covers desktop/mobile navigation, theme persistence, article layouts,
+lazy Search/Comments loading, and MathJax/Mermaid loading. Lighthouse CI enforces
+performance, accessibility, best-practices, SEO, and total-byte budgets. The
+`Theme browser regression` workflow runs both gates for relevant pull requests
+and pushes. Caddy enforces CSP only on public routes, keeps Ghost Admin and member
+endpoints outside that policy, and gives versioned assets immutable cache headers.
+
 ## Turnstile-protected member signup
 
 The `/signup/` route uses Cloudflare Turnstile before Ghost sends a membership
