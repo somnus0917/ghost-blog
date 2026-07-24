@@ -840,6 +840,8 @@ mjx-container[jax="SVG"]:not([display="true"]) > svg {
 
 .gh-content img {
   width: auto;
+  height: auto;
+  max-width: 100%;
   max-height: 760px;
   margin: 2.1em auto;
   border-radius: 4px;

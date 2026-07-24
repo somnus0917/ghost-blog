@@ -211,6 +211,12 @@ def main() -> int:
         or ".article-layout--no-toc" not in css
     ):
         fail("posts without enough headings must retain the full article width")
+    if not re.search(
+        r"\.gh-content img\s*\{[^}]*height:\s*auto;[^}]*max-width:\s*100%;",
+        css,
+        flags=re.DOTALL,
+    ):
+        fail("article images must preserve their intrinsic aspect ratio")
     if '"/api/engagement/"' not in main_js or '"/presence"' not in main_js or '"/like"' not in main_js:
         fail("main.js must connect the post engagement API")
     if "traffic-analytics:" not in compose or "tinybird-deploy:" not in compose:
