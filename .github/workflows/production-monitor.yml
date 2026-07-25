@@ -18,4 +18,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Check the public production contract
-        run: bash server/check-production.sh
+        run: |
+            bash server/check-production.sh || {
+            echo "First attempt failed, retrying..."
+            sleep 10
+            bash server/check-production.sh
+            }

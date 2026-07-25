@@ -16,8 +16,10 @@ curl_args=(
   --show-error
   --retry 5
   --retry-all-errors
-  --connect-timeout 10
+  --connect-timeout 15
+  --retry-delay 5
   --max-time 30
+  --ipv4
 )
 
 homepage="$temporary_dir/homepage.html"
