@@ -20,7 +20,9 @@ test("article without enough headings uses the full content width", async ({page
 
 test("rich content loads MathJax and Mermaid only where needed", async ({page}) => {
   await page.goto("/p/e2e-rich-content/");
-  await expect(page.locator("mjx-container")).toBeVisible({timeout: 10_000});
+  await expect(page.locator("mjx-container")).toHaveCount(3, {timeout: 10_000});
+  await expect(page.locator(".gh-content")).not.toContainText("\\color{red}");
+  await expect(page.locator(".gh-content em", {hasText: "{KL}"})).toHaveCount(0);
   await expect(page.locator(".mermaid svg")).toBeVisible({timeout: 10_000});
   await expect(page.locator(".copy-code")).toBeVisible();
 });

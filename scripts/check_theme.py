@@ -40,6 +40,7 @@ REQUIRED = {
     "assets/js/comments-ui.LICENSE.txt",
     "assets/js/mathjax.js",
     "assets/js/mathjax.LICENSE.txt",
+    "assets/js/input/tex/extensions/color.js",
     "assets/fonts/lxgw-wenkai-v2/font.css",
     "assets/fonts/lxgw-wenkai-v2/manifest.json",
     "assets/fonts/lxgw-wenkai-v2/OFL.txt",

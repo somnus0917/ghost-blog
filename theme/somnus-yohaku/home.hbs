@@ -24,13 +24,13 @@
         <button type="button" data-ghost-search aria-label="搜索">⌕</button>
         <button type="button" data-theme-toggle aria-label="切换主题"><span data-theme-icon>◐</span></button>
     </div>
-    <a class="hero-scroll" href="#recent" aria-label="阅读最近文章">⌄</a>
+    <a class="hero-scroll" href="#recent" aria-label="阅读最近博客">⌄</a>
 </section>
 
 <section class="content-section" id="recent">
     <header class="section-heading">
         <p>RECENT WRITING</p>
-        <a href="{{@site.url}}/posts/">全部文章 ↗</a>
+        <a href="{{@site.url}}/posts/">全部博客 ↗</a>
     </header>
     {{#get "posts" filter="tag:hash-posts" include="tags" limit="5" as |recent_posts|}}
         <div class="recent-list">

@@ -1,14 +1,50 @@
+var mathSourcePattern = /\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|(^|[^\\$])\$[^$\n]+?\$/;
+
+function findMathRanges(text) {
+  var pattern = new RegExp(mathSourcePattern.source, "g");
+  var ranges = [];
+  var match;
+  while ((match = pattern.exec(text))) {
+    var prefixLength = match[1] ? match[1].length : 0;
+    ranges.push({
+      start: match.index + prefixLength,
+      end: match.index + match[0].length
+    });
+  }
+  return ranges;
+}
+
+function restoreGhostMathMarkup(content) {
+  if (!content) return;
+  content.querySelectorAll("em").forEach(function (emphasis) {
+    var block = emphasis.closest("p, li, td, th, figcaption, h1, h2, h3, h4, h5, h6");
+    if (!block || !content.contains(block)) return;
+
+    var before = document.createRange();
+    before.selectNodeContents(block);
+    before.setEndBefore(emphasis);
+    var start = before.toString().length;
+    var end = start + emphasis.textContent.length;
+    var insideMath = findMathRanges(block.textContent).some(function (range) {
+      return start >= range.start && end <= range.end;
+    });
+    if (!insideMath) return;
+
+    emphasis.replaceWith(document.createTextNode(emphasis.textContent));
+    block.normalize();
+  });
+}
+
 function pageContainsMath() {
   if (document.querySelector("[data-latex-editor]")) return true;
   var content = document.querySelector(".gh-content");
   if (!content) return false;
   var walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
   var node;
-  var mathPattern = /\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|(^|[^\\])\$[^$\n]+\$/;
   while ((node = walker.nextNode())) {
     var parent = node.parentElement;
     if (parent && parent.closest("pre, code, script, style, textarea")) continue;
-    if (mathPattern.test(node.textContent)) return true;
+    if (mathSourcePattern.test(node.textContent)) return true;
   }
   return false;
 }
@@ -22,6 +58,7 @@ function isMermaidCode(code) {
 }
 
 export function initRichContent({runtimeAssets, loadScriptOnce}) {
+  restoreGhostMathMarkup(document.querySelector(".gh-content"));
   if (pageContainsMath()) {
     window.MathJax = {
       tex: {

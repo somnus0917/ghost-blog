@@ -39,9 +39,9 @@ const LOCAL_TEXT_ROOTS = [
 ];
 const LOCAL_TEXT_SUFFIXES = new Set([".hbs", ".js", ".json", ".md", ".yaml"]);
 const REQUIRED_INTERFACE_TEXT = `
-Somnus的博客 首页 文章 笔记 随笔 日记 关于 LaTeX 搜索 切换主题
-最近文章 全部文章 知识笔记 加入本站 评论 注册 登录 复制文章链接
-阅读最近文章 技术 工具 实验 日常 学习 项目 时间 记录
+Somnus的博客 首页 博客 笔记 随笔 日记 关于 LaTeX 搜索 切换主题
+最近博客 全部博客 知识笔记 加入本站 评论 注册 登录 复制文章链接
+阅读最近博客 技术 工具 实验 日常 学习 项目 时间 记录
 `;
 
 function parseArguments(argv) {

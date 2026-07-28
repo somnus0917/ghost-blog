@@ -24,7 +24,7 @@ PUBLIC_ROOT = DEFAULT_ZOLA_ROOT / "public"
 DEFAULT_OUTPUT = REPO_ROOT / "build"
 SKIP_NAMES = {"_index.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md"}
 SECTION_TAGS = {
-    "posts": ("#文章", "hash-posts"),
+    "posts": ("#博客", "hash-posts"),
     "notes": ("#笔记", "hash-notes"),
     "essays": ("#随笔", "hash-essays"),
     "diary": ("#日记", "hash-diary"),
