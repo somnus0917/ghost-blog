@@ -1,5 +1,7 @@
 name: Production deployment
 
+# Server access is deliberately limited to the ghost-deploy account.
+
 on:
   pull_request:
     paths:
