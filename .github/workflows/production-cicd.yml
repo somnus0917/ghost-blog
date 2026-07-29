@@ -113,10 +113,12 @@ jobs:
           remote="ghost-deploy@$PRODUCTION_SSH_HOST"
           bundle="$RUNNER_TEMP/ghost-blog-main.bundle"
           git bundle create "$bundle" main
-          scp -i ~/.ssh/production "$bundle" "$remote:/tmp/ghost-blog-main.bundle"
-          ssh -i ~/.ssh/production "$remote" \
+          ssh -i ~/.ssh/production -o BatchMode=yes -o ConnectTimeout=30 "$remote" \
+            'cat > /tmp/ghost-blog-main.bundle' < "$bundle"
+          ssh -i ~/.ssh/production -o BatchMode=yes -o ConnectTimeout=30 "$remote" \
             'sudo -n -u ubuntu /home/ubuntu/ghost-blog/server/deploy-production.sh'
-          ssh -i ~/.ssh/production "$remote" 'rm -f /tmp/ghost-blog-main.bundle'
+          ssh -i ~/.ssh/production -o BatchMode=yes -o ConnectTimeout=30 "$remote" \
+            'rm -f /tmp/ghost-blog-main.bundle'
 
   deploy-theme:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
