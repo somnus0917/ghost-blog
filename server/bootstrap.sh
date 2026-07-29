@@ -83,7 +83,14 @@ if [[ "$(docker inspect --format '{{.State.Running}}' somnus-ghost 2>/dev/null |
 fi
 
 docker compose --project-directory "$install_dir" pull
-docker compose --project-directory "$install_dir" up -d
+docker compose --project-directory "$install_dir" up -d mysql
+# Tinybird's interactive deployment job is optional infrastructure. When the
+# analytics profile is enabled it can remain running, so do not let it block
+# the blog container from starting.
+docker compose --project-directory "$install_dir" up -d --no-deps ghost
+if [[ ",${COMPOSE_PROFILES:-}," == *,analytics,* ]]; then
+  docker compose --project-directory "$install_dir" up -d traffic-analytics
+fi
 
 for attempt in {1..30}; do
   status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}' somnus-ghost 2>/dev/null || true)"
