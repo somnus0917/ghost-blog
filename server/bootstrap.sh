@@ -43,11 +43,11 @@ if [[ "$content_dir" != "$legacy_content" || "$mysql_dir" != "$legacy_mysql" ]];
     "$install_dir/server/backup.sh" "$install_dir"
     docker compose --project-directory "$install_dir" down
   fi
-  if [[ -d "$legacy_content" && { ! -e "$content_dir" || directory_is_empty "$content_dir"; } ]]; then
+  if [[ -d "$legacy_content" ]] && { [[ ! -e "$content_dir" ]] || directory_is_empty "$content_dir"; }; then
     mkdir -p "$content_dir"
     cp -a "$legacy_content/." "$content_dir/"
   fi
-  if [[ -d "$legacy_mysql" && { ! -e "$mysql_dir" || directory_is_empty "$mysql_dir"; } ]]; then
+  if [[ -d "$legacy_mysql" ]] && { [[ ! -e "$mysql_dir" ]] || directory_is_empty "$mysql_dir"; }; then
     mkdir -p "$mysql_dir"
     cp -a "$legacy_mysql/." "$mysql_dir/"
   fi
