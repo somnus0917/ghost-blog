@@ -88,7 +88,6 @@ jobs:
     environment: production
     env:
       PRODUCTION_SSH_HOST: ${{ secrets.PRODUCTION_SSH_HOST }}
-      PRODUCTION_SSH_USER: ${{ secrets.PRODUCTION_SSH_USER }}
       PRODUCTION_SSH_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
       PRODUCTION_SSH_KNOWN_HOSTS: ${{ secrets.PRODUCTION_SSH_KNOWN_HOSTS }}
     steps:
@@ -98,7 +97,6 @@ jobs:
       - name: Require production SSH credentials
         run: |
           test -n "$PRODUCTION_SSH_HOST"
-          test -n "$PRODUCTION_SSH_USER"
           test -n "$PRODUCTION_SSH_KEY"
           test -n "$PRODUCTION_SSH_KNOWN_HOSTS"
       - name: Configure SSH
@@ -110,12 +108,12 @@ jobs:
           chmod 600 ~/.ssh/known_hosts
       - name: Update the production checkout and apply server configuration
         run: |
-          remote="$PRODUCTION_SSH_USER@$PRODUCTION_SSH_HOST"
+          remote="ghost-deploy@$PRODUCTION_SSH_HOST"
           bundle="$RUNNER_TEMP/ghost-blog-main.bundle"
           git bundle create "$bundle" main
           scp -i ~/.ssh/production "$bundle" "$remote:/tmp/ghost-blog-main.bundle"
           ssh -i ~/.ssh/production "$remote" \
-            'set -e; cd /home/ubuntu/ghost-blog; git fetch --force /tmp/ghost-blog-main.bundle main:refs/remotes/origin/main; rm -f /tmp/ghost-blog-main.bundle; git checkout --detach --force origin/main; git reset --hard origin/main; bash server/bootstrap.sh; bash server/install-caddy-blog.sh /home/ubuntu/caddy/Caddyfile Caddyfile.snippet edge-caddy; bash server/deploy-routes.sh routes.yaml /home/ubuntu/ghost-blog'
+            'sudo -n -u ubuntu /home/ubuntu/ghost-blog/server/deploy-production.sh'
 
   deploy-theme:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'

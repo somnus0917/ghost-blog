@@ -149,14 +149,14 @@ CLOUDFLARE_API_TOKEN
 GHOST_ADMIN_API_URL
 GHOST_ADMIN_API_KEY
 PRODUCTION_SSH_HOST
-PRODUCTION_SSH_USER
 PRODUCTION_SSH_KEY
 PRODUCTION_SSH_KNOWN_HOSTS
 ```
 
 缺少任意一项凭证时，验证仍会给出结果，但生产部署会明确失败，避免出现
 “工作流绿色但线上没有更新”的假象。Cloudflare Token 只授予目标账号的
-Worker、D1 和路由部署权限；SSH 使用单独的部署密钥。
+Worker、D1 和路由部署权限；SSH 固定使用受限的 `ghost-deploy` 账户及其单独
+部署密钥。
 
 生产流水线会让腾讯云主机拉取 `main`，因此 `routes.yaml`、字体、Compose 与
 版本控制的服务器脚本都会随代码部署。Routes 内容未变化时不会重启 Ghost；内容
