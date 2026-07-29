@@ -7,11 +7,14 @@ on:
     paths:
       - "theme/**"
       - "worker/**"
-      - "shared/fonts/lxgw-wenkai-v2/**"
+      - "shared/fonts/OFL.txt"
+      - "shared/fonts/source.json"
       - "scripts/build_theme.py"
       - "scripts/build_webfont.mjs"
+      - "scripts/fetch_font_source.mjs"
       - "scripts/check_theme.py"
       - "server/install-caddy-blog.sh"
+      - "server/install-font-artifact.sh"
       - "server/deploy-routes.sh"
       - "server/sync-fonts.sh"
       - "server/bootstrap.sh"
@@ -31,11 +34,14 @@ on:
     paths:
       - "theme/**"
       - "worker/**"
-      - "shared/fonts/lxgw-wenkai-v2/**"
+      - "shared/fonts/OFL.txt"
+      - "shared/fonts/source.json"
       - "scripts/build_theme.py"
       - "scripts/build_webfont.mjs"
+      - "scripts/fetch_font_source.mjs"
       - "scripts/check_theme.py"
       - "server/install-caddy-blog.sh"
+      - "server/install-font-artifact.sh"
       - "server/deploy-routes.sh"
       - "server/sync-fonts.sh"
       - "server/bootstrap.sh"
@@ -71,6 +77,8 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-fonts.txt
       - name: Install Node dependencies
         run: npm ci
       - name: Run project checks
@@ -80,6 +88,13 @@ jobs:
         with:
           name: somnus-yohaku-${{ github.sha }}
           path: build/somnus-yohaku.zip
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload persistent font shards
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: somnus-fonts-${{ github.sha }}
+          path: shared/fonts/lxgw-wenkai-v2
           if-no-files-found: error
           retention-days: 7
 
@@ -96,6 +111,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: somnus-fonts-${{ github.sha }}
+          path: build/font-fallbacks
       - name: Require production SSH credentials
         run: |
           test -n "$PRODUCTION_SSH_HOST"
@@ -112,6 +131,7 @@ jobs:
         run: |
           remote="ghost-deploy@$PRODUCTION_SSH_HOST"
           bundle="$RUNNER_TEMP/ghost-blog-main.bundle"
+          fonts_bundle="$RUNNER_TEMP/ghost-blog-fonts.tar.gz"
           base="$(ssh -i ~/.ssh/production -o BatchMode=yes -o ConnectTimeout=30 "$remote" \
             'sudo -n -u ubuntu /home/ubuntu/ghost-blog/server/deployment-revision.sh')"
           [[ "$base" =~ ^[0-9a-f]{40}$ ]]
@@ -119,13 +139,21 @@ jobs:
             echo "production checkout is already at $base"
             exit 0
           fi
-          git bundle create "$bundle" main "^$base"
+          if git cat-file -e "${base}^{commit}" \
+            && git merge-base --is-ancestor "$base" main; then
+            git bundle create "$bundle" main "^$base"
+          else
+            git bundle create "$bundle" main
+          fi
+          tar -C build/font-fallbacks -czf "$fonts_bundle" .
           ssh -i ~/.ssh/production -o BatchMode=yes -o ConnectTimeout=30 "$remote" \
             'cat > /tmp/ghost-blog-main.bundle' < "$bundle"
           ssh -i ~/.ssh/production -o BatchMode=yes -o ConnectTimeout=30 "$remote" \
+            'cat > /tmp/ghost-blog-fonts.tar.gz' < "$fonts_bundle"
+          ssh -i ~/.ssh/production -o BatchMode=yes -o ConnectTimeout=30 "$remote" \
             'sudo -n -u ubuntu /home/ubuntu/ghost-blog/server/deploy-production.sh'
           ssh -i ~/.ssh/production -o BatchMode=yes -o ConnectTimeout=30 "$remote" \
-            'rm -f /tmp/ghost-blog-main.bundle'
+            'rm -f /tmp/ghost-blog-main.bundle /tmp/ghost-blog-fonts.tar.gz'
 
   deploy-theme:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
@@ -141,6 +169,10 @@ jobs:
         with:
           name: somnus-yohaku-${{ github.sha }}
           path: build
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: somnus-fonts-${{ github.sha }}
+          path: build/font-fallbacks
       - name: Require Ghost deployment credentials
         run: |
           test -n "$GHOST_ADMIN_API_URL"
@@ -153,7 +185,7 @@ jobs:
             -H "Cache-Control: no-cache" \
             "https://blog.somnus.wiki/content/images/fonts/lxgw-wenkai-v2/manifest.json?v=${GITHUB_SHA}" \
             --output "$remote_manifest"
-          cmp --silent shared/fonts/lxgw-wenkai-v2/manifest.json "$remote_manifest"
+          cmp --silent build/font-fallbacks/manifest.json "$remote_manifest"
       - name: Deploy through the Ghost Admin API
         uses: TryGhost/action-deploy-theme@b1ff2a5eeac1d5438a0aab35eb996fe4010d889e # v2.0.4
         with:

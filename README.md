@@ -236,25 +236,26 @@ API key to disk or command output. Run it again with
 posts to the repository versions.
 
 The site self-hosts LXGW WenKai in WOFF2 format. The upstream OFL license is
-included in `shared/fonts/OFL.txt`. The deployable theme contains a roughly
-0.4 MiB core built from the public article corpus and interface copy. Complete
-`unicode-range` shards for all remaining characters live outside the theme under
+included in `shared/fonts/OFL.txt`. The pinned upstream release and SHA-256 are
+recorded in `shared/fonts/source.json`; source and generated font binaries are
+not tracked by Git. The deployable theme contains a compact core built from the
+repository corpus and interface copy. Complete `unicode-range` shards for all
+remaining characters are generated outside the theme under
 `shared/fonts/lxgw-wenkai-v2/` and are served from
 `/content/images/fonts/lxgw-wenkai-v2/`. A normal page only fetches the core; a new
 or rare character fetches its matching LXGW WenKai shard instead of falling back
-to a visibly different system font. To refresh both deterministic layers:
+to a visibly different system font. To refresh both generated layers:
 
 ```bash
 npm install
-python3 -m venv .venv-fonts
-.venv-fonts/bin/pip install -r requirements-fonts.txt
-npm run build:font
+make font
 make check
 ```
 
-Run `server/sync-fonts.sh` on production before pushing a rebuilt font manifest.
-The deployment workflow refuses to activate a theme whose persistent manifest is
-not already live. `make dev` performs the equivalent local sync automatically.
+The production workflow publishes the generated persistent shards as a short-lived
+CI artifact, installs them before the server bootstrap, and refuses to activate a
+theme whose persistent manifest is not already live. `make dev` performs the
+equivalent local sync automatically.
 CSS `unicode-range` selects only the files needed by the characters on the current
 page, while the core font is preloaded with the same URL used by the generated
 CSS. Ghost Search loads after the first search action, while the comments UI loads

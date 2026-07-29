@@ -72,6 +72,11 @@ mkdir -p "$content_dir" "$mysql_dir" "$backup_dir"
 # directory's mode as the deployment user.
 chmod 750 "$install_dir" "$content_dir" "$backup_dir"
 
+if [[ ! -f "$install_dir/shared/fonts/lxgw-wenkai-v2/manifest.json" ]]; then
+  bash "$install_dir/server/install-font-artifact.sh" \
+    "$install_dir" \
+    /tmp/ghost-blog-fonts.tar.gz
+fi
 "$install_dir/server/sync-fonts.sh" "$install_dir"
 
 if [[ "$(docker inspect --format '{{.State.Running}}' somnus-ghost 2>/dev/null || true)" == "true" ]]; then

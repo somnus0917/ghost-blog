@@ -1,5 +1,10 @@
 {
   "version": "v1.522",
   "url": "https://github.com/lxgw/LxgwWenKai/releases/download/v1.522/LXGWWenKai-Regular.ttf",
-  "sha256": "39ad71264b588165b469e35e6afb162a378dacd1f95348160240ba9038ac3009"
+  "sha256": "39ad71264b588165b469e35e6afb162a378dacd1f95348160240ba9038ac3009",
+  "engine": {
+    "version": "7.6.8",
+    "url": "https://github.com/KonghaYao/cn-font-split/releases/download/7.6.8/libffi-wasm32-wasip1.wasm",
+    "sha256": "05a88dcb9a0b0d1e14daf0f429d9af6e2ac8d94d9e574523a76d3e9f440dccc9"
+  }
 }

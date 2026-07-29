@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 
-import {fontSplit} from "cn-font-split";
+import {
+  fontSplit as runWasmFontSplit,
+  StaticWasm
+} from "cn-font-split/dist/wasm/index.mjs";
 import {
   cpSync,
   existsSync,
@@ -22,6 +25,8 @@ const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(SCRIPT_DIR, "..");
 const SOURCE_FONT = process.env.FONT_SOURCE_PATH
   || join(REPO_ROOT, "build/font-source/LXGWWenKai-Regular.ttf");
+const FONT_ENGINE = process.env.FONT_ENGINE_PATH
+  || join(REPO_ROOT, "build/font-engine/cn-font-split-7.6.8.wasm");
 const SOURCE_LICENSE = join(REPO_ROOT, "shared/fonts/OFL.txt");
 const LOCAL_PYFTSUBSET = join(REPO_ROOT, ".venv-fonts/bin/pyftsubset");
 const OUTPUT_DIR = join(
@@ -33,7 +38,7 @@ const FALLBACK_OUTPUT_DIR = join(
   "shared/fonts/lxgw-wenkai-v2"
 );
 const FALLBACK_PUBLIC_URL = "/content/images/fonts/lxgw-wenkai-v2";
-const DEFAULT_CORPUS_URL = "https://blog.somnus.wiki/llms-full.txt";
+const DEFAULT_CORPUS_URL = "";
 const LOCAL_TEXT_ROOTS = [
   join(REPO_ROOT, "theme/somnus-yohaku"),
   join(REPO_ROOT, "fixtures")
@@ -44,6 +49,27 @@ Somnus的博客 首页 博客 笔记 随笔 日记 关于 LaTeX 搜索 切换主
 最近博客 全部博客 知识笔记 加入本站 评论 注册 登录 复制文章链接
 阅读最近博客 技术 工具 实验 日常 学习 项目 时间 记录
 `;
+
+async function fontSplit(config) {
+  const engine = new StaticWasm(readFileSync(FONT_ENGINE));
+  const normalized = {
+    ...config,
+    subsets: Array.isArray(config.subsets)
+      ? config.subsets.map(
+        (points) => new Uint8Array(new Uint32Array(points).buffer)
+      )
+      : config.subsets
+  };
+  const generated = await runWasmFontSplit(
+    normalized,
+    engine.WasiHandle,
+    {logger() {}}
+  );
+  mkdirSync(config.outDir, {recursive: true});
+  for (const output of generated.filter(Boolean)) {
+    writeFileSync(join(config.outDir, output.name), output.data);
+  }
+}
 
 function parseArguments(argv) {
   const options = {corpusUrl: DEFAULT_CORPUS_URL};
@@ -232,8 +258,8 @@ function coreFontCss(fileName, points) {
 
 async function main() {
   const options = parseArguments(process.argv.slice(2));
-  if (!existsSync(SOURCE_FONT) || !existsSync(SOURCE_LICENSE)) {
-    throw new Error("LXGW WenKai source font or OFL license is missing");
+  if (!existsSync(SOURCE_FONT) || !existsSync(FONT_ENGINE) || !existsSync(SOURCE_LICENSE)) {
+    throw new Error("LXGW WenKai source, font engine, or OFL license is missing");
   }
 
   const corpus = `${readLocalCorpus()}\n${await readPublicCorpus(options.corpusUrl)}`;
@@ -400,8 +426,10 @@ async function main() {
     );
 
     rmSync(OUTPUT_DIR, {recursive: true, force: true});
+    mkdirSync(dirname(OUTPUT_DIR), {recursive: true});
     renameSync(assembledThemeDir, OUTPUT_DIR);
     rmSync(FALLBACK_OUTPUT_DIR, {recursive: true, force: true});
+    mkdirSync(dirname(FALLBACK_OUTPUT_DIR), {recursive: true});
     renameSync(assembledFallbackDir, FALLBACK_OUTPUT_DIR);
     console.log(
       `built complete webfont: ${coreFontCodePoints.length} supported core code points `

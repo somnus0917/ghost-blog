@@ -3,6 +3,7 @@ THEME := theme/somnus-yohaku
 LOCAL_THEME := content/themes/somnus-yohaku
 PERSISTENT_FONTS := shared/fonts/lxgw-wenkai-v2
 LOCAL_FONTS := content/images/fonts/lxgw-wenkai-v2
+FONTTOOLS := .venv-fonts/bin/pyftsubset
 LOCAL_PORT ?= 2369
 LOCAL_URL ?= http://127.0.0.1:$(LOCAL_PORT)
 
@@ -11,10 +12,14 @@ LOCAL_URL ?= http://127.0.0.1:$(LOCAL_PORT)
 assets:
 	npm run build:theme-assets
 
-theme: assets
+theme: font assets
 	$(PYTHON) scripts/build_theme.py --theme $(THEME) --output build/somnus-yohaku.zip
 
-font:
+$(FONTTOOLS): requirements-fonts.txt
+	$(PYTHON) -m venv .venv-fonts
+	.venv-fonts/bin/pip install --disable-pip-version-check -r requirements-fonts.txt
+
+font: $(FONTTOOLS)
 	npm run prepare:font
 	npm run build:font
 
@@ -54,7 +59,7 @@ monitor:
 verify-backup:
 	bash server/verify-backup.sh
 
-dev: assets
+dev: font assets
 	mkdir -p $(LOCAL_THEME)
 	rsync -a --delete $(THEME)/ $(LOCAL_THEME)/
 	mkdir -p $(LOCAL_FONTS)

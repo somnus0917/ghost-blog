@@ -14,7 +14,6 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 THEME_ROOT = REPO_ROOT / "theme" / "somnus-yohaku"
 THEME_SOURCE_ROOT = REPO_ROOT / "theme" / "src"
-SHARED_FONT = REPO_ROOT / "shared" / "fonts" / "LXGWWenKai-Regular.woff2"
 WEB_FONT_DIR = THEME_ROOT / "assets" / "fonts" / "lxgw-wenkai-v2"
 FALLBACK_FONT_DIR = REPO_ROOT / "shared" / "fonts" / "lxgw-wenkai-v2"
 FONT_MANIFEST = WEB_FONT_DIR / "manifest.json"
@@ -120,8 +119,6 @@ def main() -> int:
         fail("default.hbs must load the complete LXGW WenKai shard stylesheet")
     if default_template.index(font_stylesheet) > default_template.index(screen_stylesheet):
         fail("webfont stylesheet must be discovered before the main stylesheet")
-    if not SHARED_FONT.is_file():
-        fail(f"missing shared web font: {SHARED_FONT}")
     if not FONT_MANIFEST.is_file():
         fail(f"missing webfont manifest: {FONT_MANIFEST}")
     if not FALLBACK_FONT_MANIFEST.is_file():
@@ -302,6 +299,7 @@ def main() -> int:
             fail(f"missing Worker file: {worker_file.relative_to(REPO_ROOT)}")
     for server_file in (
         REPO_ROOT / "server" / "deploy-routes.sh",
+        REPO_ROOT / "server" / "install-font-artifact.sh",
         REPO_ROOT / "server" / "check-production.sh",
         REPO_ROOT / "server" / "verify-backup.sh",
         REPO_ROOT / "server" / "ghost-blog-backup-verify.service",
@@ -318,6 +316,9 @@ def main() -> int:
         "deploy-server:",
         "needs: deploy-server",
         "needs: deploy-theme",
+        "somnus-fonts-${{ github.sha }}",
+        "build/font-fallbacks",
+        "ghost-blog-fonts.tar.gz",
         "server/deploy-routes.sh",
         "server/sync-fonts.sh",
     ):

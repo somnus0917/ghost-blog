@@ -4,6 +4,8 @@
 .private/
 build/
 shared/fonts/LXGWWenKai-Regular.woff2
+/shared/fonts/lxgw-wenkai-v2/
+/theme/somnus-yohaku/assets/fonts/lxgw-wenkai-v2/
 content/
 mysql/
 backups/
