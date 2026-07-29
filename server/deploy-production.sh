@@ -15,7 +15,6 @@ test -r "$bundle"
 
 cd "$install_dir"
 git fetch --force "$bundle" main:refs/remotes/origin/main
-rm -f "$bundle"
 git checkout --detach --force origin/main
 git reset --hard origin/main
 bash server/bootstrap.sh

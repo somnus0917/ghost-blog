@@ -114,6 +114,7 @@ jobs:
           scp -i ~/.ssh/production "$bundle" "$remote:/tmp/ghost-blog-main.bundle"
           ssh -i ~/.ssh/production "$remote" \
             'sudo -n -u ubuntu /home/ubuntu/ghost-blog/server/deploy-production.sh'
+          ssh -i ~/.ssh/production "$remote" 'rm -f /tmp/ghost-blog-main.bundle'
 
   deploy-theme:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
