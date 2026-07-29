@@ -2,6 +2,7 @@
   "name": "somnus-ghost-tooling",
   "private": true,
   "scripts": {
+    "prepare:font": "node scripts/fetch_font_source.mjs",
     "build:font": "node scripts/build_webfont.mjs",
     "build:theme-assets": "node scripts/build_theme_assets.mjs",
     "test:e2e": "playwright test",

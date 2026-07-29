@@ -15,6 +15,7 @@ theme: assets
 	$(PYTHON) scripts/build_theme.py --theme $(THEME) --output build/somnus-yohaku.zip
 
 font:
+	npm run prepare:font
 	npm run build:font
 
 check: theme

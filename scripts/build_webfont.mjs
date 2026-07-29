@@ -20,7 +20,8 @@ import {fileURLToPath} from "node:url";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(SCRIPT_DIR, "..");
-const SOURCE_FONT = join(REPO_ROOT, "shared/fonts/LXGWWenKai-Regular.woff2");
+const SOURCE_FONT = process.env.FONT_SOURCE_PATH
+  || join(REPO_ROOT, "build/font-source/LXGWWenKai-Regular.ttf");
 const SOURCE_LICENSE = join(REPO_ROOT, "shared/fonts/OFL.txt");
 const LOCAL_PYFTSUBSET = join(REPO_ROOT, ".venv-fonts/bin/pyftsubset");
 const OUTPUT_DIR = join(
@@ -376,7 +377,7 @@ async function main() {
     const manifest = {
       schema: 1,
       generator: "cn-font-split@7.4.3",
-      source: "shared/fonts/LXGWWenKai-Regular.woff2",
+      source: "LXGWWenKai-Regular.ttf",
       corpusUrl: options.corpusUrl || null,
       corpusCodePointCount: coreCodePoints.length,
       coreCodePointCount: coreFontCodePoints.length,

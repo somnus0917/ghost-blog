@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "generator": "cn-font-split@7.4.3",
-  "source": "shared/fonts/LXGWWenKai-Regular.woff2",
+  "source": "LXGWWenKai-Regular.ttf",
   "corpusUrl": "https://blog.somnus.wiki/llms-full.txt",
-  "corpusCodePointCount": 1835,
-  "coreCodePointCount": 1757,
+  "corpusCodePointCount": 3291,
+  "coreCodePointCount": 2761,
   "coreFile": "LXGWWenKai-Core-v2.woff2",
-  "coreBytes": 380436,
+  "coreBytes": 526684,
   "fallbackBaseUrl": "/content/images/fonts/lxgw-wenkai-v2",
-  "fallbackFileCount": 310,
-  "fallbackBytes": 13061588,
-  "totalFontBytes": 13442024
+  "fallbackFileCount": 309,
+  "fallbackBytes": 13055296,
+  "totalFontBytes": 13581980
 }

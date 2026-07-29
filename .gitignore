@@ -3,6 +3,7 @@
 !.env.example
 .private/
 build/
+shared/fonts/LXGWWenKai-Regular.woff2
 content/
 mysql/
 backups/
