@@ -3,7 +3,10 @@ set -euo pipefail
 
 source_routes="${1:?usage: deploy-routes.sh ROUTES_YAML [INSTALL_DIR]}"
 install_dir="${2:-/home/ubuntu/ghost-blog}"
-settings_dir="$install_dir/content/settings"
+set -a
+source "$install_dir/.env"
+set +a
+settings_dir="${GHOST_CONTENT_DIR:-$install_dir/content}/settings"
 active_routes="$settings_dir/routes.yaml"
 previous_routes="$settings_dir/.routes.yaml.previous"
 

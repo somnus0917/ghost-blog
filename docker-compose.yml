@@ -57,7 +57,9 @@ services:
       retries: 12
       start_period: 30s
     volumes:
-      - ./content:/var/lib/ghost/content
+      # Production points these at /home/ubuntu/ghost-data via .env. Local
+      # development keeps the repository-relative defaults.
+      - ${GHOST_CONTENT_DIR:-./content}:/var/lib/ghost/content
     networks:
       - ghost-internal
       - proxy
@@ -161,7 +163,7 @@ services:
       retries: 12
       start_period: 30s
     volumes:
-      - ./mysql:/var/lib/mysql
+      - ${MYSQL_DATA_DIR:-./mysql}:/var/lib/mysql
     networks:
       - ghost-internal
 

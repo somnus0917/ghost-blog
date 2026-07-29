@@ -12,9 +12,13 @@ on:
       - "server/install-caddy-blog.sh"
       - "server/deploy-routes.sh"
       - "server/sync-fonts.sh"
+      - "server/bootstrap.sh"
+      - "server/backup.sh"
+      - "server/verify-backup.sh"
       - "server/smoke-production.sh"
       - "Caddyfile.snippet"
       - "routes.yaml"
+      - "docker-compose.yml"
       - "package.json"
       - "package-lock.json"
       - "requirements-fonts.txt"
@@ -32,9 +36,13 @@ on:
       - "server/install-caddy-blog.sh"
       - "server/deploy-routes.sh"
       - "server/sync-fonts.sh"
+      - "server/bootstrap.sh"
+      - "server/backup.sh"
+      - "server/verify-backup.sh"
       - "server/smoke-production.sh"
       - "Caddyfile.snippet"
       - "routes.yaml"
+      - "docker-compose.yml"
       - "package.json"
       - "package-lock.json"
       - "requirements-fonts.txt"
@@ -98,28 +106,11 @@ jobs:
           printf '%s\n' "$PRODUCTION_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/production
           chmod 600 ~/.ssh/known_hosts
-      - name: Install server-side blog configuration
+      - name: Update the production checkout and apply server configuration
         run: |
           remote="$PRODUCTION_SSH_USER@$PRODUCTION_SSH_HOST"
-          remote_fonts="/home/ubuntu/ghost-blog/shared/fonts/lxgw-wenkai-v2"
-          ssh -i ~/.ssh/production "$remote" "mkdir -p '$remote_fonts'"
-          rsync -az --delete --delay-updates \
-            -e "ssh -i $HOME/.ssh/production" \
-            shared/fonts/lxgw-wenkai-v2/ \
-            "$remote:$remote_fonts/"
-          scp -i ~/.ssh/production \
-            Caddyfile.snippet \
-            routes.yaml \
-            server/install-caddy-blog.sh \
-            server/deploy-routes.sh \
-            server/sync-fonts.sh \
-            "$remote:/tmp/"
           ssh -i ~/.ssh/production "$remote" \
-            "bash /tmp/sync-fonts.sh /home/ubuntu/ghost-blog"
-          ssh -i ~/.ssh/production "$remote" \
-            "bash /tmp/install-caddy-blog.sh /home/ubuntu/caddy/Caddyfile /tmp/Caddyfile.snippet edge-caddy"
-          ssh -i ~/.ssh/production "$remote" \
-            "bash /tmp/deploy-routes.sh /tmp/routes.yaml /home/ubuntu/ghost-blog"
+            'set -e; cd /home/ubuntu/ghost-blog; git fetch --prune origin main; git checkout --detach --force origin/main; git reset --hard origin/main; bash server/bootstrap.sh; bash server/install-caddy-blog.sh /home/ubuntu/caddy/Caddyfile Caddyfile.snippet edge-caddy; bash server/deploy-routes.sh routes.yaml /home/ubuntu/ghost-blog'
 
   deploy-theme:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'

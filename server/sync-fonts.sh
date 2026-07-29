@@ -2,8 +2,11 @@
 set -euo pipefail
 
 install_dir="${1:-/home/ubuntu/ghost-blog}"
+set -a
+source "$install_dir/.env"
+set +a
 source_dir="$install_dir/shared/fonts/lxgw-wenkai-v2"
-fonts_dir="$install_dir/content/images/fonts"
+fonts_dir="${GHOST_CONTENT_DIR:-$install_dir/content}/images/fonts"
 active="$fonts_dir/lxgw-wenkai-v2"
 previous="$fonts_dir/.lxgw-wenkai-v2.previous"
 

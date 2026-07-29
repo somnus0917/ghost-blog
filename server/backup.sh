@@ -3,7 +3,11 @@ set -euo pipefail
 umask 077
 
 install_dir="${1:-/home/ubuntu/ghost-blog}"
-backup_dir="$install_dir/backups"
+set -a
+source "$install_dir/.env"
+set +a
+content_dir="${GHOST_CONTENT_DIR:-$install_dir/content}"
+backup_dir="${BACKUP_DIR:-$install_dir/backups}"
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 database_backup="$backup_dir/ghost-db-$timestamp.sql.gz"
 content_backup="$backup_dir/ghost-content-$timestamp.tar.gz"
@@ -17,10 +21,6 @@ cleanup() {
 }
 trap cleanup EXIT
 
-set -a
-source "$install_dir/.env"
-set +a
-
 docker exec -e MYSQL_PWD="$MYSQL_PASSWORD" somnus-ghost-mysql mysqldump \
   -u "$MYSQL_USER" \
   --single-transaction \
@@ -29,11 +29,11 @@ docker exec -e MYSQL_PWD="$MYSQL_PASSWORD" somnus-ghost-mysql mysqldump \
   "$MYSQL_DATABASE" \
   | gzip > "$database_backup"
 
-tar -C "$install_dir" -czf "$content_backup" \
+tar -C "$(dirname "$content_dir")" -czf "$content_backup" \
   --exclude="content/logs" \
   --exclude="content/images/fonts/lxgw-wenkai-v2" \
   --exclude="content/themes/.somnus-yohaku.previous" \
-  content
+  "$(basename "$content_dir")"
 gzip -t "$database_backup"
 tar -tzf "$content_backup" >/dev/null
 local_backup_complete=true

@@ -3,7 +3,10 @@ set -euo pipefail
 umask 077
 
 install_dir="${1:-/home/ubuntu/ghost-blog}"
-backup_dir="$install_dir/backups"
+set -a
+source "$install_dir/.env"
+set +a
+backup_dir="${BACKUP_DIR:-$install_dir/backups}"
 if [[ ! -d "$backup_dir" ]]; then
   echo "Ghost backup directory does not exist: $backup_dir" >&2
   exit 1

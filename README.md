@@ -158,14 +158,13 @@ PRODUCTION_SSH_KNOWN_HOSTS
 “工作流绿色但线上没有更新”的假象。Cloudflare Token 只授予目标账号的
 Worker、D1 和路由部署权限；SSH 使用单独的部署密钥。
 
-`routes.yaml` 和 `shared/fonts/lxgw-wenkai-v2/**` 已纳入自动部署。Routes 内容
-未变化时不会重启 Ghost；内容变化时会保留旧版本，重启和路由检查失败会自动
-回滚。字体在主题部署前同步并通过公网 manifest 再次核对。以下修改仍需要额外
-操作：
+生产流水线会让腾讯云主机拉取 `main`，因此 `routes.yaml`、字体、Compose 与
+版本控制的服务器脚本都会随代码部署。Routes 内容未变化时不会重启 Ghost；内容
+变化时会保留旧版本，重启和路由检查失败会自动回滚。字体在主题部署前同步并通过
+公网 manifest 再次核对。以下修改仍需要额外操作：
 
-- 备份脚本、systemd unit、`docker-compose.yml` 和生产 `.env` 等未被生产
-  流水线明确安装的服务器文件：需要通过 SSH/rsync 同步到腾讯云并按部署文档
-  执行。
+- systemd unit 和生产 `.env` 不在 Git 中，需要通过 SSH 在服务器上单独安装或
+  更新；`.env` 中的运行时路径与密钥不得提交。
 - Ghost 文章和 Page：直接在 Ghost Admin 编辑，不通过 Git 部署。
 
 `worker/wrangler.toml` 只保存可公开的绑定 ID 和变量，已纳入版本控制；
@@ -375,12 +374,56 @@ the parent directory of this repository, `--zola-root` may be omitted.
 
 ## Deploy on the Tencent Cloud host
 
+Production code is a Git checkout; Ghost content, MySQL data, and backups live
+outside it at `/home/ubuntu/ghost-data`. This lets deployments advance or roll
+back the checkout without overwriting the site data. The host needs a read-only
+GitHub Deploy Key (or equivalent GitHub App credential) for this repository.
+
+For the one-time migration from the previous rsync layout, give the existing
+directory a Git remote first. This preserves ignored runtime directories while
+replacing tracked deployment files with `main` (the server needs its read-only
+Deploy Key before `git fetch` will work):
+
 ```bash
-rsync -av \
-  --exclude .git --exclude .env --exclude .private \
-  --exclude build --exclude content --exclude mysql --exclude backups \
-  ./ tencent-cloud:/home/ubuntu/ghost-blog/
-ssh tencent-cloud 'bash /home/ubuntu/ghost-blog/server/bootstrap.sh'
+ssh tencent-cloud '
+  set -e
+  cd /home/ubuntu/ghost-blog
+  git init
+  git remote add origin git@github.com:somnus0917/ghost-blog.git 2>/dev/null || \
+    git remote set-url origin git@github.com:somnus0917/ghost-blog.git
+  git fetch --prune origin main
+  git checkout -f -B main origin/main
+'
+```
+
+Then run the migration:
+
+```bash
+ssh tencent-cloud '
+  cd /home/ubuntu/ghost-blog &&
+  git fetch --prune origin main &&
+  git checkout --detach --force origin/main &&
+  git reset --hard origin/main &&
+  bash server/bootstrap.sh
+'
+```
+
+`bootstrap.sh` takes a verified backup, stops the old containers, copies existing
+`content/` and `mysql/` directories to `/home/ubuntu/ghost-data/` when needed,
+then starts containers with the external paths. It leaves the old directories in
+place as a rollback safety net; do not delete them until the site and a backup
+restore check have both succeeded.
+
+For an emergency manual code update after migration:
+
+```bash
+ssh tencent-cloud '
+  cd /home/ubuntu/ghost-blog &&
+  git fetch --prune origin main &&
+  git checkout --detach --force origin/main &&
+  git reset --hard origin/main &&
+  bash server/bootstrap.sh
+'
 ```
 
 Ghost and MySQL images are pinned by multi-platform digest. On an existing

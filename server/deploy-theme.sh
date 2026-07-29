@@ -3,7 +3,10 @@ set -euo pipefail
 
 archive="${1:?usage: deploy-theme.sh THEME_ZIP [INSTALL_DIR]}"
 install_dir="${2:-/home/ubuntu/ghost-blog}"
-themes_dir="$install_dir/content/themes"
+set -a
+source "$install_dir/.env"
+set +a
+themes_dir="${GHOST_CONTENT_DIR:-$install_dir/content}/themes"
 active="$themes_dir/somnus-yohaku"
 previous="$themes_dir/.somnus-yohaku.previous"
 
