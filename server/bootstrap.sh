@@ -68,7 +68,9 @@ for setting in GHOST_CONTENT_DIR MYSQL_DATA_DIR BACKUP_DIR; do
 done
 
 mkdir -p "$content_dir" "$mysql_dir" "$backup_dir"
-chmod 750 "$install_dir" "$content_dir" "$mysql_dir" "$backup_dir"
+# MySQL owns its data directory after initialization; do not change that
+# directory's mode as the deployment user.
+chmod 750 "$install_dir" "$content_dir" "$backup_dir"
 
 "$install_dir/server/sync-fonts.sh" "$install_dir"
 
