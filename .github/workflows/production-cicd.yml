@@ -115,6 +115,10 @@ jobs:
           base="$(ssh -i ~/.ssh/production -o BatchMode=yes -o ConnectTimeout=30 "$remote" \
             'sudo -n -u ubuntu /home/ubuntu/ghost-blog/server/deployment-revision.sh')"
           [[ "$base" =~ ^[0-9a-f]{40}$ ]]
+          if [[ "$base" == "$(git rev-parse main)" ]]; then
+            echo "production checkout is already at $base"
+            exit 0
+          fi
           git bundle create "$bundle" main "^$base"
           ssh -i ~/.ssh/production -o BatchMode=yes -o ConnectTimeout=30 "$remote" \
             'cat > /tmp/ghost-blog-main.bundle' < "$bundle"
