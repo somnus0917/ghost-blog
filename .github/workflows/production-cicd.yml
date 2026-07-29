@@ -93,6 +93,8 @@ jobs:
       PRODUCTION_SSH_KNOWN_HOSTS: ${{ secrets.PRODUCTION_SSH_KNOWN_HOSTS }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - name: Require production SSH credentials
         run: |
           test -n "$PRODUCTION_SSH_HOST"
@@ -109,8 +111,11 @@ jobs:
       - name: Update the production checkout and apply server configuration
         run: |
           remote="$PRODUCTION_SSH_USER@$PRODUCTION_SSH_HOST"
+          bundle="$RUNNER_TEMP/ghost-blog-main.bundle"
+          git bundle create "$bundle" main
+          scp -i ~/.ssh/production "$bundle" "$remote:/tmp/ghost-blog-main.bundle"
           ssh -i ~/.ssh/production "$remote" \
-            'set -e; cd /home/ubuntu/ghost-blog; git fetch --prune origin main; git checkout --detach --force origin/main; git reset --hard origin/main; bash server/bootstrap.sh; bash server/install-caddy-blog.sh /home/ubuntu/caddy/Caddyfile Caddyfile.snippet edge-caddy; bash server/deploy-routes.sh routes.yaml /home/ubuntu/ghost-blog'
+            'set -e; cd /home/ubuntu/ghost-blog; git fetch --force /tmp/ghost-blog-main.bundle main:refs/remotes/origin/main; rm -f /tmp/ghost-blog-main.bundle; git checkout --detach --force origin/main; git reset --hard origin/main; bash server/bootstrap.sh; bash server/install-caddy-blog.sh /home/ubuntu/caddy/Caddyfile Caddyfile.snippet edge-caddy; bash server/deploy-routes.sh routes.yaml /home/ubuntu/ghost-blog'
 
   deploy-theme:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
