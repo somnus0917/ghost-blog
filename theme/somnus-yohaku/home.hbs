@@ -41,6 +41,20 @@
     {{/get}}
 </section>
 
+<section class="content-section">
+    <header class="section-heading">
+        <p>RECENT ESSAYS</p>
+        <a href="{{@site.url}}/essays/">全部随笔 ↗</a>
+    </header>
+    {{#get "posts" filter="tag:hash-essays" include="tags" limit="5" as |recent_essays|}}
+        <div class="recent-list">
+            {{#foreach recent_essays}}
+                {{> "post-row"}}
+            {{/foreach}}
+        </div>
+    {{/get}}
+</section>
+
 <section class="content-section home-streams">
     <div class="stream-panel">
         <header class="section-heading">
